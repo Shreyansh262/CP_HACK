@@ -1,0 +1,212 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+const DIFFICULTY_BUCKETS = [
+  { label: 'Easy', min: 0, max: 1299 },
+  { label: 'Medium', min: 1300, max: 1799 },
+  { label: 'Hard', min: 1800, max: 9999 },
+];
+
+export default function FilterForm({
+  allTags,
+  defaultQ,
+  defaultTags,
+  defaultDifficulty,
+}: {
+  allTags: string[];
+  defaultQ: string;
+  defaultTags: string[];
+  defaultDifficulty: string;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState(defaultQ);
+  const [selectedTags, setSelectedTags] = useState<string[]>(defaultTags);
+  const [difficulty, setDifficulty] = useState(defaultDifficulty); // 'Easy'|'Medium'|'Hard'|''
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  function toggleTag(t: string) {
+    setSelectedTags((prev) =>
+      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
+    );
+  }
+
+  function apply() {
+    const params = new URLSearchParams();
+    if (q.trim()) params.set('q', q.trim());
+    if (selectedTags.length) params.set('tags', selectedTags.join(','));
+    if (difficulty) params.set('difficulty', difficulty);
+    const qs = params.toString();
+    router.push(qs ? `/?${qs}` : '/');
+    setOpen(false);
+  }
+
+  function clearAll() {
+    setQ('');
+    setSelectedTags([]);
+    setDifficulty('');
+    router.push('/');
+    setOpen(false);
+  }
+
+  const activeCount = selectedTags.length + (difficulty ? 1 : 0);
+
+  return (
+    <div className="mb-6 space-y-2">
+      {/* Search row */}
+      <div className="flex gap-2">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && apply()}
+          placeholder="Search title…"
+          className="flex-1 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+        />
+
+        {/* Filter dropdown trigger */}
+        <div className="relative" ref={panelRef}>
+          <button
+            onClick={() => setOpen((o) => !o)}
+            className={`flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
+              open || activeCount > 0
+                ? 'border-zinc-500 bg-zinc-800 text-zinc-100'
+                : 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-500'
+            }`}
+          >
+            <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M1.5 3.5A.5.5 0 0 1 2 3h12a.5.5 0 0 1 .354.854L10 7.707V13.5a.5.5 0 0 1-.777.416l-3-2A.5.5 0 0 1 6 11.5V7.707L1.646 3.854A.5.5 0 0 1 1.5 3.5z" />
+            </svg>
+            Filters
+            {activeCount > 0 && (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-100 text-[11px] font-bold text-zinc-900">
+                {activeCount}
+              </span>
+            )}
+          </button>
+
+          {/* Dropdown panel */}
+          {open && (
+            <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl">
+              {/* Difficulty */}
+              <div className="border-b border-zinc-800 p-4">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                  Difficulty
+                </p>
+                <div className="flex gap-2">
+                  {DIFFICULTY_BUCKETS.map((b) => (
+                    <button
+                      key={b.label}
+                      onClick={() =>
+                        setDifficulty((d) => (d === b.label ? '' : b.label))
+                      }
+                      className={`flex-1 rounded-md border py-1.5 text-xs font-medium transition-colors ${
+                        difficulty === b.label
+                          ? b.label === 'Easy'
+                            ? 'border-emerald-600 bg-emerald-900/50 text-emerald-300'
+                            : b.label === 'Medium'
+                            ? 'border-amber-600 bg-amber-900/50 text-amber-300'
+                            : 'border-red-600 bg-red-900/50 text-red-300'
+                          : 'border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+                      }`}
+                    >
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div className="p-4">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                  Tags
+                </p>
+                <div className="max-h-52 overflow-y-auto pr-1">
+                  <div className="grid grid-cols-2 gap-1">
+                    {allTags.map((t) => (
+                      <label
+                        key={t}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedTags.includes(t)}
+                          onChange={() => toggleTag(t)}
+                          className="h-3.5 w-3.5 rounded border-zinc-600 bg-zinc-800 accent-zinc-100"
+                        />
+                        {t}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between border-t border-zinc-800 px-4 py-3">
+                <button
+                  onClick={clearAll}
+                  className="text-xs text-zinc-500 hover:text-zinc-300"
+                >
+                  Clear all
+                </button>
+                <button
+                  onClick={apply}
+                  className="rounded-md bg-zinc-100 px-4 py-1.5 text-xs font-semibold text-zinc-900 hover:bg-white"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Search apply */}
+        <button
+          onClick={apply}
+          className="rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white"
+        >
+          Search
+        </button>
+      </div>
+
+      {/* Active filter chips */}
+      {(selectedTags.length > 0 || difficulty) && (
+        <div className="flex flex-wrap gap-1.5">
+          {difficulty && (
+            <span className="flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-[11px] text-zinc-300">
+              {difficulty}
+              <button
+                onClick={() => { setDifficulty(''); apply(); }}
+                className="ml-0.5 text-zinc-500 hover:text-zinc-200"
+              >×</button>
+            </span>
+          )}
+          {selectedTags.map((t) => (
+            <span
+              key={t}
+              className="flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-[11px] text-zinc-300"
+            >
+              {t}
+              <button
+                onClick={() => { toggleTag(t); apply(); }}
+                className="ml-0.5 text-zinc-500 hover:text-zinc-200"
+              >×</button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

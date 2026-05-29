@@ -1,10 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import type { Hint } from '@/lib/types';
 
 export default function HintPanel({ hints }: { hints: Hint[] }) {
-  const [revealed, setRevealed] = useState<number>(0); // 0 = none, up to 3
+  const [revealed, setRevealed] = useState<number>(0);
 
   if (!hints || hints.length === 0) {
     return (
@@ -35,11 +39,7 @@ export default function HintPanel({ hints }: { hints: Hint[] }) {
               <div className="text-xs font-medium text-zinc-400">
                 Hint {h.level}
                 <span className="ml-2 text-[10px] uppercase tracking-wide text-zinc-600">
-                  {h.level === 1
-                    ? 'nudge'
-                    : h.level === 2
-                    ? 'approach'
-                    : 'key insight'}
+                  {h.level === 1 ? 'nudge' : h.level === 2 ? 'approach' : 'key insight'}
                 </span>
               </div>
               {!unlocked && nextUp && (
@@ -51,8 +51,16 @@ export default function HintPanel({ hints }: { hints: Hint[] }) {
                 </button>
               )}
             </div>
+
             {unlocked ? (
-              <p className="text-sm leading-relaxed text-zinc-200">{h.text}</p>
+              <div className="prose prose-invert prose-sm max-w-none text-zinc-200 [&_p]:my-1 [&_p]:leading-relaxed">
+                <ReactMarkdown
+                  remarkPlugins={[remarkMath]}
+                  rehypePlugins={[rehypeKatex]}
+                >
+                  {h.text}
+                </ReactMarkdown>
+              </div>
             ) : (
               <p className="select-none text-sm leading-relaxed text-zinc-700 blur-[4px]">
                 {h.text.slice(0, 120)}…
