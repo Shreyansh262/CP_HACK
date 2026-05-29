@@ -1,0 +1,19 @@
+# AI Coding Tutor — Seed Script Dependencies
+# Install with: pip install -r requirements_seed.txt
+# Python 3.11+ recommended
+
+# HuggingFace dataset loader
+datasets>=3.0.0
+huggingface_hub>=0.23.0
+
+# Supabase Python client
+supabase>=2.5.0
+
+# Google Gemini (new SDK — the old google-generativeai is deprecated)
+google-genai>=1.0.0
+
+# Progress bars
+tqdm>=4.66.0
+
+# .env file loading
+python-dotenv>=1.0.0
