@@ -1,63 +1,48 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import type { Problem } from '@/lib/types';
+import { getAuthUser } from '@/lib/supabase-server';
 import ProblemView from './ProblemView';
+import type { Hint } from '@/lib/types';
 
-export const dynamic = 'force-dynamic';
+type Props = { params: Promise<{ id: string }> };
 
-export default async function ProblemPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function ProblemPage({ params }: Props) {
   const { id } = await params;
 
-  const { data, error } = await supabase
-    .from('competitive_problems')
-    .select(
-      'id, source, external_id, title, problem_statement, difficulty, tags, hints, edge_cases, created_at'
-    )
-    .eq('id', id)
-    .maybeSingle();
+  // Fetch problem and user in parallel.
+  const [problemResult, user] = await Promise.all([
+    supabase
+      .from('competitive_problems')
+      .select('id, title, problem_statement, difficulty, tags, hints, edge_cases, external_id, source, created_at')
+      .eq('id', id)
+      .single(),
+    getAuthUser(),
+  ]);
 
-  if (error) {
-    return (
-      <main className="mx-auto max-w-3xl p-8 text-sm text-red-300">
-        DB error: {error.message}
-      </main>
-    );
-  }
-  if (!data) return notFound();
+  if (problemResult.error || !problemResult.data) notFound();
 
-  const problem = data as Problem;
-  // Hints come back as JSONB. Defensively coerce and sort.
-  const hints = Array.isArray(problem.hints)
-    ? [...problem.hints].sort((a, b) => a.level - b.level)
-    : [];
+  const problem = problemResult.data;
+  const hints: Hint[] = Array.isArray(problem.hints) ? problem.hints : [];
 
   return (
-    <div className="flex h-screen flex-col bg-zinc-950 text-zinc-100">
-      <header className="flex shrink-0 items-center justify-between border-b border-zinc-800 px-4 py-2">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            className="text-xs text-zinc-400 hover:text-zinc-200"
-          >
-            ← All problems
-          </Link>
-          <div className="text-sm font-medium">
-            {problem.external_id && (
-              <span className="mr-2 text-zinc-500">{problem.external_id}</span>
-            )}
-            {problem.title}
-          </div>
-        </div>
-        <div className="text-xs text-zinc-500">
-          {problem.difficulty ?? '—'} · {(problem.tags ?? []).join(', ')}
-        </div>
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* Problem header */}
+      <header className="flex shrink-0 items-center gap-3 border-b border-zinc-800 px-4 py-2">
+        <a href="/" className="text-xs text-zinc-500 hover:text-zinc-300">
+          ← Problems
+        </a>
+        <span className="text-xs text-zinc-600">·</span>
+        <h1 className="truncate text-sm font-semibold text-zinc-100">
+          {problem.external_id ? `${problem.external_id} · ` : ''}
+          {problem.title}
+        </h1>
+        <span className="ml-auto text-xs text-zinc-500">
+          {problem.difficulty ?? '—'} ·{' '}
+          {[...new Set(problem.tags ?? [])].slice(0, 4).join(', ')}
+        </span>
       </header>
-      <ProblemView problem={{ ...problem, hints }} />
+
+      <ProblemView problem={{ ...problem, hints }} user={user} />
     </div>
   );
 }
