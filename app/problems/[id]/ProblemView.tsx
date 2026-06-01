@@ -65,7 +65,60 @@ export default function ProblemView({
   const workerRef = useRef<Worker | null>(null);
   const runIdRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ── Progress tracking ──────────────────────────────────────────────────────
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastPingRef = useRef<string | null>(null);
 
+  // Fire /open once on mount for signed-in users.
+  useEffect(() => {
+    if (!user) return;
+    fetch('/api/progress/open', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ problem_id: problem.id }),
+    }).catch(() => { });
+  }, [user, problem.id]);
+
+  // Heartbeat: every 30s while tab is focused.
+  useEffect(() => {
+    if (!user) return;
+
+    const ping = () => {
+      fetch('/api/progress/heartbeat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          problem_id: problem.id,
+          last_ping_at: lastPingRef.current,
+        }),
+      })
+        .then((r) => r.json())
+        .then((d) => { if (d.server_now) lastPingRef.current = d.server_now; })
+        .catch(() => { });
+    };
+
+    const start = () => {
+      if (heartbeatRef.current) return;
+      ping(); // immediate first ping establishes server_now
+      heartbeatRef.current = setInterval(ping, 30_000);
+    };
+
+    const stop = () => {
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
+    };
+
+    if (!document.hidden) start();
+    const onVisibility = () => (document.hidden ? stop() : start());
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [user, problem.id]);
   // Spin up the parse worker once.
   useEffect(() => {
     workerRef.current = new Worker('/workers/parser.worker.js');
@@ -112,14 +165,30 @@ export default function ProblemView({
       <section className="col-span-5 flex min-h-0 flex-col">
         {/* Language selector + lint summary */}
         <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 px-3 py-1.5">
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value as 'cpp' | 'python')}
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-100"
-          >
-            <option value="cpp">C++</option>
-            <option value="python">Python</option>
-          </select>
+          <div className="flex items-center gap-3">
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as 'cpp' | 'python')}
+              className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-100"
+            >
+              <option value="cpp">C++</option>
+              <option value="python">Python</option>
+            </select>
+            {user && (
+              <button
+                onClick={() =>
+                  fetch('/api/progress/mark-solved', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ problem_id: problem.id }),
+                  }).catch(() => {})
+                }
+                className="rounded border border-green-800 px-2 py-0.5 text-[11px] text-green-400 hover:border-green-600 hover:text-green-300"
+              >
+                ✓ Mark solved
+              </button>
+            )}
+          </div>
           <div className="text-xs text-zinc-500">
             {diagnostics.length === 0
               ? '✓ no issues'

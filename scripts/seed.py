@@ -36,8 +36,8 @@ load_dotenv(Path(__file__).parent.parent / ".env.local")
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 # ── Config ────────────────────────────────────────────────────────────────────
-SUPABASE_URL           = os.environ.get("SUPABASE_URL") or os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "")
-SUPABASE_SERVICE_KEY   = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+SUPABASE_URL           = os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "")
+SUPABASE_SERVICE_KEY   = os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY", "")
 GEMINI_API_KEY         = os.environ.get("GEMINI_API_KEY", "")
 
 TARGET_TAGS = {

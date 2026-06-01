@@ -87,7 +87,7 @@ export default function TutorChat({
       .then((data) => {
         if ('t1Remaining' in data) setQuota(data as QuotaState);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [user]);
 
   // ── Message helpers ──────────────────────────────────────────────────────────
@@ -111,6 +111,14 @@ export default function TutorChat({
       }
 
       push({ role: 'user', content: `Reveal Hint ${level}`, source: 'system' });
+      // Track hint usage.
+      if (user) {
+        fetch('/api/progress/hint-revealed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ problem_id: problem.id, level }),
+        }).catch(() => { });
+      }
       push({
         role: 'assistant',
         content: `**Hint ${level}** *(${hintLabel(level)})*\n\n${hint.text}`,
@@ -271,8 +279,8 @@ export default function TutorChat({
         chip === 'Review my code ⚡'
           ? 'Please review my current code and give me one targeted piece of feedback.'
           : chip === 'Deep analysis 🔬'
-          ? 'Please deeply analyse my code: approach, time complexity, and any subtle edge cases.'
-          : chip; // use chip label as the explicit question
+            ? 'Please deeply analyse my code: approach, time complexity, and any subtle edge cases.'
+            : chip; // use chip label as the explicit question
 
       await callReview(tier, intent, chip);
     },
@@ -457,10 +465,10 @@ function ChatMessage({
           isUser
             ? 'ml-8 rounded-lg bg-zinc-700 px-3 py-2 text-xs text-zinc-100'
             : message.source === 'stored'
-            ? 'rounded-lg border border-amber-900/30 bg-amber-950/10 px-3 py-2'
-            : message.source === 'ai-t2'
-            ? 'rounded-lg border border-purple-900/30 bg-purple-950/10 px-3 py-2'
-            : 'rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2'
+              ? 'rounded-lg border border-amber-900/30 bg-amber-950/10 px-3 py-2'
+              : message.source === 'ai-t2'
+                ? 'rounded-lg border border-purple-900/30 bg-purple-950/10 px-3 py-2'
+                : 'rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2'
         }
       >
         <div className="prose prose-xs prose-invert max-w-none leading-relaxed">
@@ -522,13 +530,12 @@ function QuotaBadge({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-medium transition-colors ${
-        exhausted
+      className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-medium transition-colors ${exhausted
           ? 'text-zinc-700'
           : label === 'Deep'
-          ? 'bg-purple-900/20 text-purple-400'
-          : 'bg-blue-900/20 text-blue-400'
-      }`}
+            ? 'bg-purple-900/20 text-purple-400'
+            : 'bg-blue-900/20 text-blue-400'
+        }`}
     >
       {emoji} {label}
       {remaining !== null && (

@@ -11,6 +11,7 @@ import {
   type ChatTurn,
 } from '@/lib/prompt';
 import type { Problem } from '@/lib/types';
+import { supabase as supabaseAdmin } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60; // Vercel Hobby: 60s; Fluid Compute: up to 300s
@@ -168,7 +169,24 @@ export async function POST(request: NextRequest) {
     // activeTier: quotaState.activeTier,
   };
 
-  // 9. ── Return ──────────────────────────────────────────────────────────────
+  // 9. ── Track usage stats ───────────────────────────────────────────────────
+  const counterColumn = effectiveTier === 'deep' ? 'tier2_calls' : 'tier1_calls';
+
+  // Atomic increment via a one-shot SQL — same shape as time_spent.
+  // We piggyback on the same pattern: ensure-then-increment.
+  const { error: progressErr } = await supabaseAdmin.rpc('increment_tier_call', {
+    p_user_id: user.id,
+    p_problem_id: problem.id,
+    p_column: counterColumn, // 'tier1_calls' or 'tier2_calls'
+  });
+
+  if (progressErr) {
+    // Log but do NOT fail the response — the user got their AI answer; progress
+    // tracking is best-effort.
+    console.error('[review] progress increment failed:', progressErr);
+  }
+
+  // 10. ── Return ──────────────────────────────────────────────────────────────
   return NextResponse.json({
     mode: 'ai',
     content: text,
