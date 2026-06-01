@@ -143,9 +143,14 @@ export default function TutorChat({
       setIsLoading(true);
       setDowngradeNote(null);
 
-      // Build a trimmed history from stored messages (exclude system meta-messages).
+      // Build trimmed history: include ALL user messages + AI (non-system) assistant messages.
+      // Excluding user messages by source was the original bug — it produced model-first history.
       const history = messagesRef.current
-        .filter((m) => m.source !== 'system')
+        .filter(
+          (m) =>
+            m.role === 'user' ||
+            (m.role === 'assistant' && m.source !== 'system')
+        )
         .slice(-6)
         .map((m) => ({ role: m.role, content: m.content }));
 
@@ -377,6 +382,7 @@ export default function TutorChat({
                 )
               }
               disabled={isLoading || quota?.t1Remaining === 0}
+              suppressHydrationWarning
               className="flex-1 rounded border border-zinc-700 px-2 py-1.5 text-[11px] text-zinc-300 hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-40"
             >
               ⚡ Review{quota ? ` (${quota.t1Remaining})` : ''}
@@ -390,6 +396,7 @@ export default function TutorChat({
                 )
               }
               disabled={isLoading || quota?.t2Remaining === 0}
+              suppressHydrationWarning
               className="flex-1 rounded border border-purple-900 px-2 py-1.5 text-[11px] text-purple-300 hover:border-purple-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               🔬 Deep{quota ? ` (${quota.t2Remaining})` : ''}
@@ -405,11 +412,13 @@ export default function TutorChat({
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
               placeholder="Ask a question…"
               disabled={isLoading}
+              suppressHydrationWarning
               className="flex-1 rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-xs text-zinc-100 placeholder-zinc-600 focus:border-zinc-500 focus:outline-none disabled:opacity-50"
             />
             <button
               onClick={handleSend}
               disabled={!inputText.trim() || isLoading}
+              suppressHydrationWarning
               className="rounded bg-zinc-700 px-2.5 py-1.5 text-xs text-zinc-100 hover:bg-zinc-600 disabled:opacity-40"
             >
               Send
@@ -471,6 +480,7 @@ function ChatMessage({
             <button
               key={chip}
               onClick={() => onChip(chip)}
+              suppressHydrationWarning
               className="rounded-full border border-zinc-700 bg-zinc-800/60 px-2.5 py-0.5 text-[11px] text-zinc-300 hover:border-zinc-500 hover:bg-zinc-800"
             >
               {chip}

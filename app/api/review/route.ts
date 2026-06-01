@@ -6,6 +6,7 @@ import {
   buildSystemPrompt,
   trimHistory,
   toGeminiHistory,
+  sanitizeGeminiHistory,
   postProcessResponse,
   type ChatTurn,
 } from '@/lib/prompt';
@@ -29,6 +30,16 @@ const MODELS = {
 const THINKING_BUDGET = {
   quick: 512,
   deep: 8192,
+} as const;
+
+/**
+ * Output token limits per tier.
+ * Quick: concise single nudge — 1024 is plenty.
+ * Deep:  structured multi-section analysis — needs room to breathe.
+ */
+const MAX_OUTPUT_TOKENS = {
+  quick: 1500,
+  deep: 3000,
 } as const;
 
 // ─── Request shape ────────────────────────────────────────────────────────────
@@ -85,9 +96,9 @@ export async function POST(request: NextRequest) {
   }
 
   // 4. ── Build prompt ────────────────────────────────────────────────────────
-  const systemPrompt = buildSystemPrompt(problem);
+  const systemPrompt = buildSystemPrompt(problem, effectiveTier as 'quick' | 'deep');
   const trimmedHistory = trimHistory(history);
-  const geminiHistory = toGeminiHistory(trimmedHistory);
+  const geminiHistory = sanitizeGeminiHistory(toGeminiHistory(trimmedHistory));
 
   // Wrap the user's code in a fenced block inside the message so the model sees
   // exact syntax — but note the system prompt forbids it from echoing code back.
@@ -101,7 +112,7 @@ export async function POST(request: NextRequest) {
     model: modelId,
     systemInstruction: systemPrompt,
     generationConfig: {
-      maxOutputTokens: 1024,
+      maxOutputTokens: MAX_OUTPUT_TOKENS[effectiveTier as 'quick' | 'deep'],
       temperature: 0.4,
       // thinkingConfig is supported by the newer Gemini models.
       // The TS types may lag; cast to any to avoid compile errors.
@@ -154,6 +165,7 @@ export async function POST(request: NextRequest) {
       effectiveTier === 'deep'
         ? Math.max(0, quotaState.t2Remaining - 1)
         : quotaState.t2Remaining,
+    // activeTier: quotaState.activeTier,
   };
 
   // 9. ── Return ──────────────────────────────────────────────────────────────

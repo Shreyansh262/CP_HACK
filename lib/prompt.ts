@@ -27,6 +27,29 @@ export function toGeminiHistory(
   }));
 }
 
+/**
+ * Gemini's startChat() requires history to:
+ *  1. Start with role 'user'
+ *  2. Strictly alternate user → model → user → model …
+ *
+ * Strips any leading 'model' turns and any trailing 'user' turns (incomplete
+ * pairs) so we never hand Gemini a malformed history.
+ */
+export function sanitizeGeminiHistory(
+  history: Array<{ role: 'user' | 'model'; parts: [{ text: string }] }>
+): Array<{ role: 'user' | 'model'; parts: [{ text: string }] }> {
+  // 1. Drop leading model turns
+  let start = 0;
+  while (start < history.length && history[start].role !== 'user') start++;
+  const trimmed = history.slice(start);
+
+  // 2. Drop trailing user turns — history must end on a complete pair (model)
+  let end = trimmed.length;
+  while (end > 0 && trimmed[end - 1].role !== 'model') end--;
+
+  return trimmed.slice(0, end);
+}
+
 // ─── System prompt ────────────────────────────────────────────────────────────
 
 /**
@@ -38,13 +61,24 @@ export function toGeminiHistory(
  *  - Category-aware via tags
  *  - Never code
  */
-export function buildSystemPrompt(problem: Problem): string {
+export function buildSystemPrompt(problem: Problem, tier: 'quick' | 'deep' = 'quick'): string {
   const tags = [...new Set(problem.tags ?? [])].join(', ') || 'general';
 
   const hintsSection =
     (problem.hints ?? [])
       .map((h: Hint) => `  Hint ${h.level} (${hintLabel(h.level)}): ${h.text}`)
       .join('\n') || '  (none stored)';
+
+  const responseStyle =
+    tier === 'deep'
+      ? `HARD LIMIT: 250 to 300 words maximum (not counting the chips tag).
+     You may use markdown headers (##) to organise sections. Up to 4 sections.
+     Still ONE primary nudge — elaborate on complexity, edge cases, paradigm fit in sub-sections.
+     End with the <chips> tag.`
+      : `HARD LIMIT: 80 to 100 words maximum for your entire response (not counting the chips tag).
+   No headers, no numbered lists, no multi-part breakdowns.
+   ONE nudge only — the single most important thing. If you want to say more, don't.
+   End with the <chips> tag.`;
 
   return `\
 You are an adaptive competitive programming tutor. Your sole purpose is to guide users to solve problems themselves — never to give away solutions.
@@ -89,7 +123,8 @@ SILENT CLASSIFICATION — before every response, silently classify the user's co
 
 RESPONSE FORMAT:
 - Warm, Socratic, encouraging. Ask the user to reason before revealing.
-- 2–4 short paragraphs max. Use maths notation where helpful (O(n²), n ≤ 10⁵, etc).
+- Use maths notation where helpful (O(n²), n ≤ 10⁵, etc).
+- Style for this turn: ${responseStyle}
 - End EVERY response with a <chips> tag containing 2–3 follow-up chip labels as a JSON array.
   Format exactly: <chips>["Label A", "Label B", "Label C"]</chips>
   Chips should be specific to the moment. Good examples:
