@@ -47,6 +47,8 @@ solve()
 `,
 };
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 type Diagnostic = { line: number; message: string; severity: 'warn' | 'error' };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -61,11 +63,14 @@ export default function ProblemView({
   const [language, setLanguage] = useState<'cpp' | 'python'>('cpp');
   const [code, setCode] = useState<string>(STARTER.cpp);
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
+  const [markedSolved, setMarkedSolved] = useState(false);
 
+  // Web Worker for off-main-thread parsing.
   const workerRef = useRef<Worker | null>(null);
   const runIdRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // ── Progress tracking ──────────────────────────────────────────────────────
+
+  // ── Phase 4: progress tracking ─────────────────────────────────────────────
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastPingRef = useRef<string | null>(null);
 
@@ -76,7 +81,7 @@ export default function ProblemView({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ problem_id: problem.id }),
-    }).catch(() => { });
+    }).catch(() => {});
   }, [user, problem.id]);
 
   // Heartbeat: every 30s while tab is focused.
@@ -87,19 +92,18 @@ export default function ProblemView({
       fetch('/api/progress/heartbeat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          problem_id: problem.id,
-          last_ping_at: lastPingRef.current,
-        }),
+        body: JSON.stringify({ problem_id: problem.id, last_ping_at: lastPingRef.current }),
       })
         .then((r) => r.json())
-        .then((d) => { if (d.server_now) lastPingRef.current = d.server_now; })
-        .catch(() => { });
+        .then((d: { server_now?: string }) => {
+          if (d.server_now) lastPingRef.current = d.server_now;
+        })
+        .catch(() => {});
     };
 
     const start = () => {
       if (heartbeatRef.current) return;
-      ping(); // immediate first ping establishes server_now
+      ping(); // immediate first ping sets server_now baseline
       heartbeatRef.current = setInterval(ping, 30_000);
     };
 
@@ -119,7 +123,8 @@ export default function ProblemView({
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [user, problem.id]);
-  // Spin up the parse worker once.
+
+  // ── Worker setup ───────────────────────────────────────────────────────────
   useEffect(() => {
     workerRef.current = new Worker('/workers/parser.worker.js');
     return () => {
@@ -128,12 +133,12 @@ export default function ProblemView({
     };
   }, []);
 
-  // Reset code to starter when language changes.
+  // Reset code on language switch.
   useEffect(() => {
     setCode(STARTER[language] ?? '');
   }, [language]);
 
-  // Debounced lint: 350ms after last keystroke.
+  // Debounced parse: 350ms after last keystroke.
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     const myRun = ++runIdRef.current;
@@ -141,91 +146,94 @@ export default function ProblemView({
     timerRef.current = setTimeout(() => {
       const worker = workerRef.current;
       if (!worker) return;
+
       const handler = (e: MessageEvent) => {
         if (e.data.runId !== myRun) return;
         setDiagnostics(e.data.diagnostics ?? []);
         worker.removeEventListener('message', handler);
       };
+
       worker.addEventListener('message', handler);
-      worker.postMessage({ runId: myRun, language, code });
+      worker.postMessage({ code, language, runId: myRun });
     }, 350);
 
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, [code, language]);
 
+  // ── Mark solved handler ────────────────────────────────────────────────────
+  const handleMarkSolved = () => {
+    if (!user) return;
+    fetch('/api/progress/mark-solved', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ problem_id: problem.id }),
+    })
+      .then(() => setMarkedSolved(true))
+      .catch(() => {});
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-12 gap-0">
-
-      {/* ── Left: problem statement ── */}
-      <section className="col-span-4 min-h-0 overflow-y-auto border-r border-zinc-800 p-5">
+    <div className="flex min-h-0 flex-1 overflow-hidden">
+      {/* Panel 1 — Problem statement */}
+      <div className="w-100 shrink-0 overflow-y-auto border-r border-zinc-800">
         <ProblemStatement markdown={problem.problem_statement} />
-      </section>
+      </div>
 
-      {/* ── Middle: code editor ── */}
-      <section className="col-span-5 flex min-h-0 flex-col">
-        {/* Language selector + lint summary */}
-        <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 px-3 py-1.5">
-          <div className="flex items-center gap-3">
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value as 'cpp' | 'python')}
-              className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-100"
+      {/* Panel 2 — Editor */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Toolbar */}
+        <div className="flex shrink-0 items-center gap-2 border-b border-zinc-800 px-2 py-1.5">
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as 'cpp' | 'python')}
+            suppressHydrationWarning
+            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-300 focus:outline-none"
+          >
+            <option value="cpp">C++17</option>
+            <option value="python">Python 3</option>
+          </select>
+
+          {diagnostics.length > 0 && (
+            <span className="text-xs text-amber-400">
+              {diagnostics.length} issue{diagnostics.length !== 1 ? 's' : ''}
+            </span>
+          )}
+
+          {/* Phase 4: Mark Solved button */}
+          {user && (
+            <button
+              onClick={handleMarkSolved}
+              disabled={markedSolved}
+              suppressHydrationWarning
+              className={`ml-auto rounded border px-2 py-0.5 text-[11px] transition-colors ${
+                markedSolved
+                  ? 'border-green-800 text-green-600 cursor-default'
+                  : 'border-green-800 text-green-400 hover:border-green-600 hover:text-green-300'
+              }`}
             >
-              <option value="cpp">C++</option>
-              <option value="python">Python</option>
-            </select>
-            {user && (
-              <button
-                onClick={() =>
-                  fetch('/api/progress/mark-solved', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ problem_id: problem.id }),
-                  }).catch(() => {})
-                }
-                className="rounded border border-green-800 px-2 py-0.5 text-[11px] text-green-400 hover:border-green-600 hover:text-green-300"
-              >
-                ✓ Mark solved
-              </button>
-            )}
-          </div>
-          <div className="text-xs text-zinc-500">
-            {diagnostics.length === 0
-              ? '✓ no issues'
-              : `${diagnostics.length} issue${diagnostics.length === 1 ? '' : 's'}`}
-          </div>
+              {markedSolved ? '✓ Solved' : '✓ Mark solved'}
+            </button>
+          )}
         </div>
 
-        {/* Monaco editor */}
+        {/* Editor */}
         <div className="min-h-0 flex-1">
           <CodeEditor language={language} value={code} onChange={setCode} />
         </div>
+      </div>
 
-        {/* Diagnostics tray */}
-        {diagnostics.length > 0 && (
-          <div className="max-h-28 shrink-0 overflow-y-auto border-t border-zinc-800 bg-zinc-950 p-2 font-mono text-[11px]">
-            {diagnostics.map((d, i) => (
-              <div
-                key={i}
-                className={d.severity === 'error' ? 'text-red-400' : 'text-amber-400'}
-              >
-                line {d.line}: {d.message}
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* ── Right: tutor chat (replaces HintPanel) ── */}
-      <section className="col-span-3 flex min-h-0 flex-col border-l border-zinc-800">
+      {/* Panel 3 — Tutor chat */}
+      <div className="w-90 shrink-0 border-l border-zinc-800">
         <TutorChat
           problem={problem}
           code={code}
           language={language}
           user={user}
         />
-      </section>
-
+      </div>
     </div>
   );
 }

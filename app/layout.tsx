@@ -1,11 +1,15 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
+import { Inter } from 'next/font/google';
 import './globals.css';
-import { getAuthUser } from '@/lib/supabase-server';
 import AuthButton from '@/components/AuthButton';
+import { getAuthUser } from '@/lib/supabase-server';
+
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'AI Coding Tutor',
-  description: 'Competitive programming tutor — progressive hints, never full solutions.',
+  description: 'Competitive programming practice with adaptive AI hints',
 };
 
 export default async function RootLayout({
@@ -16,35 +20,42 @@ export default async function RootLayout({
   const user = await getAuthUser();
 
   return (
-    <html lang="en" className="dark h-full">
-      <head>
-        {/* KaTeX CSS is imported by the component; this prevents FOUC on first load. */}
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
-          crossOrigin="anonymous"
-        />
-      </head>
-      <body className="flex h-full flex-col bg-zinc-950 text-zinc-100 antialiased">
-        {/* ── Global header ── */}
-        <header className="flex h-10 shrink-0 items-center justify-between border-b border-zinc-800 px-4">
-          <a href="/" className="text-sm font-semibold tracking-tight text-zinc-200">
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.className} flex min-h-screen flex-col bg-zinc-950 text-zinc-100`}>
+        {/* ── Header ── */}
+        <header className="flex shrink-0 items-center gap-3 border-b border-zinc-800 px-4 py-2">
+          <Link href="/" className="text-sm font-semibold text-zinc-100 hover:text-white">
             AI Coding Tutor
-          </a>
-          <AuthButton user={user} />
+          </Link>
+
+          <span className="text-xs text-zinc-600">·</span>
+
+          {/* Phase 4: Profile link for signed-in users */}
+          {user && (
+            <Link
+              href="/profile"
+              className="text-xs text-zinc-500 hover:text-zinc-300"
+            >
+              Profile
+            </Link>
+          )}
+
+          <div className="ml-auto">
+            <AuthButton user={user} />
+          </div>
         </header>
 
-        {/* ── Main content ── */}
-        <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+        {/* ── Main ── */}
+        <main className="flex min-h-0 flex-1 flex-col">{children}</main>
 
         {/* ── Footer ── */}
-        <footer className="shrink-0 border-t border-zinc-800 px-4 py-2 text-[10px] text-zinc-600">
+        <footer className="shrink-0 border-t border-zinc-800 px-4 py-2 text-center text-[10px] text-zinc-600">
           Problems sourced from{' '}
           <a
             href="https://huggingface.co/datasets/open-r1/codeforces"
-            className="underline hover:text-zinc-400"
             target="_blank"
             rel="noopener noreferrer"
+            className="underline hover:text-zinc-400"
           >
             open-r1/codeforces
           </a>{' '}
