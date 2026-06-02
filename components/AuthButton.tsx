@@ -46,7 +46,7 @@ export default function AuthButton({ user }: { user: User | null }) {
   if (user) {
     return (
       <div className="flex items-center gap-3">
-        <span className="max-w-[180px] truncate text-xs text-zinc-400">
+        <span className="max-w-45 truncate text-xs text-zinc-400">
           {user.email}
         </span>
         <button

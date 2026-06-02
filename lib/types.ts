@@ -8,6 +8,7 @@ export type Problem = {
   source: string;
   external_id: string | null;
   title: string;
+  sample_io?: { input: string; output: string }[] | null;
   problem_statement: string;
   difficulty: string | null;
   tags: string[] | null;

@@ -7,6 +7,7 @@ import type { Problem } from '@/lib/types';
 import ProblemStatement from '@/components/ProblemStatement';
 import TutorChat from '@/components/TutorChat';
 import SimilarProblems from '@/components/SimilarProblems';
+import RunPanel from '@/components/RunPanel';
 
 // Monaco is client-only and heavy — dynamic import, SSR off.
 type CodeEditorProps = {
@@ -82,6 +83,7 @@ export default function ProblemView({
   const dragging = useRef<'left' | 'right' | null>(null);
   const dragStartX = useRef(0);
   const dragStartPct = useRef(0);
+  const samples = (problem.sample_io ?? []) as { input: string; output: string }[];
 
   useEffect(() => {
     function onMouseMove(e: MouseEvent) {
@@ -228,6 +230,17 @@ export default function ProblemView({
         <div className="p-4">
           <ProblemStatement markdown={problem.problem_statement} />
         </div>
+        {samples.length > 0 && (
+          <div className="border-t border-zinc-800 px-4 pt-3 pb-4">
+            <p className="mb-1 text-xs font-medium text-zinc-400">Run on samples</p>
+            <RunPanel
+              code={code}
+              language={language}
+              samples={samples}
+              onAllPassed={user ? handleMarkSolved : undefined}
+            />
+          </div>
+        )}
         <div className="border-t border-zinc-800 px-4 pt-3 pb-4">
           <p className="mb-2 text-xs font-medium text-zinc-400">Similar problems</p>
           <SimilarProblems problemId={problem.id} source="seeded" />
