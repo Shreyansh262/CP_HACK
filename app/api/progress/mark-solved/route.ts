@@ -1,54 +1,62 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { requireUser, isUuid } from '@/lib/progress';
+import { createClient } from '@supabase/supabase-js';
 
-/**
- * POST /api/progress/mark-solved
- * Body: { problem_id: uuid }
- *
- * Sets status='solved' and solved_at=now() if not already solved.
- * Idempotent — clicking twice doesn't change solved_at.
- */
-export async function POST(req: Request) {
-  const auth = await requireUser();
-  if ('error' in auth) return auth.error;
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
 
-  let body: { problem_id?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'invalid_json' }, { status: 400 });
+export async function POST(req: NextRequest) {
+  // requireUser returns { userId, db } OR { error } — check before destructuring
+  const authResult = await requireUser();
+  if ('error' in authResult) return authResult.error;
+  const { userId } = authResult;
+
+  const body = await req.json() as { problemId?: string; source?: string };
+  const { problemId, source } = body;
+
+  if (!problemId || !isUuid(problemId)) {
+    return NextResponse.json({ error: 'Invalid problemId' }, { status: 400 });
   }
 
-  if (!isUuid(body.problem_id)) {
-    return NextResponse.json({ error: 'invalid_problem_id' }, { status: 400 });
-  }
+  const isUnseen = source === 'unseen';
+  const conflictCol = isUnseen ? 'unseen_problem_id' : 'problem_id';
 
-  // Ensure row exists (user solved without ever opening via the app)
-  await auth.db
+  // 1. Check if already solved — preserve the original solved_at (idempotent)
+  const { data: existing } = await supabase
     .from('user_progress')
-    .upsert(
-      { user_id: auth.userId, problem_id: body.problem_id, status: 'attempted' },
-      { onConflict: 'user_id,problem_id', ignoreDuplicates: true },
-    );
-
-  // Promote to solved only if not already solved (preserves original solved_at)
-  const { data, error } = await auth.db
-    .from('user_progress')
-    .update({
-      status: 'solved',
-      solved_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('user_id', auth.userId)
-    .eq('problem_id', body.problem_id)
-    .neq('status', 'solved')
-    .select('solved_at')
+    .select('id, status, solved_at')
+    .eq('user_id', userId)
+    .eq(conflictCol, problemId)
     .maybeSingle();
 
-  if (error) {
-    console.error('[progress/mark-solved]', error);
-    return NextResponse.json({ error: 'db_error' }, { status: 500 });
+  if (existing?.status === 'solved') {
+    return NextResponse.json({ ok: true });
   }
 
-  return NextResponse.json({ ok: true, newly_solved: data !== null });
+  const now = new Date().toISOString();
+
+  // 2. Upsert — only send the relevant FK column (other defaults to NULL in DB).
+  //    Avoids the TypeScript null-assignability issue with Supabase generated types.
+  const { error } = isUnseen
+    ? await supabase
+        .from('user_progress')
+        .upsert(
+          { user_id: userId, unseen_problem_id: problemId, status: 'solved', solved_at: now, updated_at: now },
+          { onConflict: 'user_id,unseen_problem_id' },
+        )
+    : await supabase
+        .from('user_progress')
+        .upsert(
+          { user_id: userId, problem_id: problemId, status: 'solved', solved_at: now, updated_at: now },
+          { onConflict: 'user_id,problem_id' },
+        );
+
+  if (error) {
+    console.error('[mark-solved]', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
 }

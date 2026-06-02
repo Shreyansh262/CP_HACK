@@ -7,9 +7,7 @@ import { useMemo, useState } from 'react';
 const CELL = 11;
 const GAP = 2;
 const WEEKS = 53;
-const DAYS = 7;
 
-// Colour by solve count per day.
 function cellColor(count: number): string {
   if (count === 0) return '#27272a';  // zinc-800
   if (count === 1) return '#166534';  // green-800
@@ -27,9 +25,6 @@ function dayKey(date: Date): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-/**
- * solvedByDay: YYYY-MM-DD → solve count (built in profile-queries)
- */
 export default function StreakCalendar({
   solvedByDay,
 }: {
@@ -44,105 +39,145 @@ export default function StreakCalendar({
 
   const cells = useMemo(() => {
     const today = new Date();
-    // Start of the grid: Sunday of the week 52 weeks ago.
-    const start = new Date(today);
-    start.setDate(today.getDate() - WEEKS * 7 + 1);
-    start.setDate(start.getDate() - start.getDay()); // rewind to Sunday
+    today.setHours(0, 0, 0, 0);
 
-    const result: {
-      date: string;
-      count: number;
-      col: number;
-      row: number;
-      future: boolean;
-    }[] = [];
+    // Find the Saturday of the current week (end of current week column)
+    const todayDow = today.getDay(); // 0=Sun … 6=Sat
+    const endOfGrid = new Date(today);
+    endOfGrid.setDate(today.getDate() + (6 - todayDow)); // advance to Saturday
 
-    const cur = new Date(start);
-    for (let col = 0; col < WEEKS; col++) {
-      for (let row = 0; row < DAYS; row++) {
-        const k = dayKey(cur);
+    // Start of grid = 53 weeks back from endOfGrid, on a Sunday
+    const startOfGrid = new Date(endOfGrid);
+    startOfGrid.setDate(endOfGrid.getDate() - WEEKS * 7 + 1); // +1 → Sunday
+
+    const result: { date: string; count: number; col: number; row: number; isFuture: boolean }[] = [];
+
+    for (let week = 0; week < WEEKS; week++) {
+      for (let dow = 0; dow < 7; dow++) {
+        const d = new Date(startOfGrid);
+        d.setDate(startOfGrid.getDate() + week * 7 + dow);
+        const key = dayKey(d);
+        const isFuture = d > today;
         result.push({
-          date: k,
-          count: solvedByDay[k] ?? 0,
-          col,
-          row,
-          future: cur > today,
+          date: key,
+          count: isFuture ? 0 : (solvedByDay[key] ?? 0),
+          col: week,
+          row: dow,
+          isFuture,
         });
-        cur.setDate(cur.getDate() + 1);
       }
     }
+
     return result;
   }, [solvedByDay]);
 
-  const svgWidth = WEEKS * (CELL + GAP);
-  const svgHeight = DAYS * (CELL + GAP);
+  // Month labels: find first week where month changes
+  const monthLabels = useMemo(() => {
+    const labels: { label: string; col: number }[] = [];
+    let lastMonth = -1;
+    for (const cell of cells) {
+      if (cell.row !== 0) continue;
+      const month = new Date(cell.date).getMonth();
+      if (month !== lastMonth) {
+        labels.push({
+          label: new Intl.DateTimeFormat('en-US', { month: 'short' }).format(new Date(cell.date)),
+          col: cell.col,
+        });
+        lastMonth = month;
+      }
+    }
+    return labels;
+  }, [cells]);
 
-  // Day-of-week labels
-  const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  const svgWidth = WEEKS * (CELL + GAP) - GAP;
+  const svgHeight = 7 * (CELL + GAP) - GAP + 18; // +18 for month labels at top
 
   return (
-    <div className="relative overflow-x-auto">
-      <div className="flex gap-1">
-        {/* Day-of-week labels */}
-        <div className="flex flex-col justify-around pr-1" style={{ height: svgHeight }}>
-          {dayLabels.map((d, i) => (
-            <span key={i} className="text-[9px] leading-none text-zinc-600">
-              {i % 2 === 1 ? d : ''}
-            </span>
-          ))}
-        </div>
+    <div className="overflow-x-auto">
+      <svg
+        width={svgWidth}
+        height={svgHeight}
+        className="block"
+        onMouseLeave={() => setTooltip(null)}
+      >
+        {/* Month labels */}
+        {monthLabels.map(({ label, col }) => (
+          <text
+            key={`${label}-${col}`}
+            x={col * (CELL + GAP)}
+            y={10}
+            fontSize={9}
+            fill="#71717a"
+          >
+            {label}
+          </text>
+        ))}
 
-        <svg
-          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-          width={svgWidth}
-          height={svgHeight}
-          className="overflow-visible"
-        >
-          {cells.map((cell) => (
+        {/* Cells */}
+        {cells.map((cell) => (
+          <rect
+            key={cell.date}
+            x={cell.col * (CELL + GAP)}
+            y={18 + cell.row * (CELL + GAP)}
+            width={CELL}
+            height={CELL}
+            rx={2}
+            fill={cell.isFuture ? 'transparent' : cellColor(cell.count)}
+            stroke={cell.isFuture ? '#3f3f46' : 'none'}
+            strokeWidth={cell.isFuture ? 1 : 0}
+            style={{ cursor: cell.isFuture ? 'default' : 'pointer' }}
+            onMouseEnter={(e) => {
+              if (cell.isFuture) return;
+              const svg = (e.target as SVGElement).closest('svg')!.getBoundingClientRect();
+              const rect = (e.target as SVGElement).getBoundingClientRect();
+              setTooltip({
+                date: cell.date,
+                count: cell.count,
+                x: rect.left - svg.left + CELL / 2,
+                y: rect.top - svg.top - 6,
+              });
+            }}
+          />
+        ))}
+
+        {/* Tooltip */}
+        {tooltip && (
+          <g>
             <rect
-              key={cell.date}
-              x={cell.col * (CELL + GAP)}
-              y={cell.row * (CELL + GAP)}
-              width={CELL}
-              height={CELL}
-              rx={2}
-              fill={cell.future ? 'transparent' : cellColor(cell.count)}
-              className={cell.future ? '' : 'cursor-pointer transition-opacity hover:opacity-80'}
-              onMouseEnter={(e) => {
-                const rect = (e.target as SVGRectElement).getBoundingClientRect();
-                setTooltip({
-                  date: cell.date,
-                  count: cell.count,
-                  x: rect.left,
-                  y: rect.top,
-                });
-              }}
-              onMouseLeave={() => setTooltip(null)}
+              x={Math.min(tooltip.x - 40, svgWidth - 85)}
+              y={tooltip.y - 24}
+              width={84}
+              height={20}
+              rx={3}
+              fill="#18181b"
+              stroke="#3f3f46"
+              strokeWidth={1}
             />
-          ))}
-        </svg>
-      </div>
+            <text
+              x={Math.min(tooltip.x - 40, svgWidth - 85) + 42}
+              y={tooltip.y - 10}
+              fontSize={9}
+              fill="#d4d4d8"
+              textAnchor="middle"
+            >
+              {tooltip.date} · {tooltip.count} solved
+            </text>
+          </g>
+        )}
+      </svg>
 
       {/* Legend */}
-      <div className="mt-2 flex items-center gap-1 text-[9px] text-zinc-600">
+      <div className="mt-1 flex items-center gap-1.5 text-[10px] text-zinc-500">
         <span>Less</span>
         {[0, 1, 2, 3].map((n) => (
-          <svg key={n} width={CELL} height={CELL}>
-            <rect width={CELL} height={CELL} rx={2} fill={cellColor(n)} />
-          </svg>
+          <div
+            key={n}
+            className="h-2.5 w-2.5 rounded-xs"
+            style={{ backgroundColor: cellColor(n) }}
+          />
         ))}
         <span>More</span>
       </div>
-
-      {/* Tooltip */}
-      {tooltip && (
-        <div
-          className="pointer-events-none fixed z-50 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300 shadow-lg"
-          style={{ left: tooltip.x + 14, top: tooltip.y - 8 }}
-        >
-          {tooltip.date}: {tooltip.count} solved
-        </div>
-      )}
     </div>
   );
 }

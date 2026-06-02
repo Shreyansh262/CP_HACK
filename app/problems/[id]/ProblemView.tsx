@@ -6,6 +6,7 @@ import type { User } from '@supabase/supabase-js';
 import type { Problem } from '@/lib/types';
 import ProblemStatement from '@/components/ProblemStatement';
 import TutorChat from '@/components/TutorChat';
+import SimilarProblems from '@/components/SimilarProblems';
 
 // Monaco is client-only and heavy — dynamic import, SSR off.
 type CodeEditorProps = {
@@ -226,6 +227,10 @@ export default function ProblemView({
       >
         <div className="p-4">
           <ProblemStatement markdown={problem.problem_statement} />
+        </div>
+        <div className="border-t border-zinc-800 px-4 pt-3 pb-4">
+          <p className="mb-2 text-xs font-medium text-zinc-400">Similar problems</p>
+          <SimilarProblems problemId={problem.id} source="seeded" />
         </div>
       </div>
       <div

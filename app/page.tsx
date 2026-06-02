@@ -4,7 +4,7 @@ import { createSupabaseServer, getAuthUser } from '@/lib/supabase-server';
 import { computeStreaks, type ProblemAttempt } from '@/lib/scoring';
 import type { ProblemListItem } from '@/lib/types';
 import FilterForm from '@/components/FilterForm';
-
+import UnseenProblemInput from '@/components/UnseenProblemInput';
 export const dynamic = 'force-dynamic';
 
 const PAGE_SIZE = 50;
@@ -161,7 +161,7 @@ export default async function HomePage({
           </span>
         )}
       </div>
-
+      <UnseenProblemInput />
       {/* ── Problem list ── */}
       <div className="divide-y divide-zinc-800 rounded-xl border border-zinc-800">
         {problems.length === 0 ? (
