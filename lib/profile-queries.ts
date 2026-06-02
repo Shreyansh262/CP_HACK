@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { createSupabaseServer } from '@/lib/supabase-server';
 import {
   overallScore,
   computeStreaks,
@@ -69,8 +69,9 @@ export async function fetchProfileData(
   userId: string,
   timeZone = 'UTC',
 ): Promise<ProfileData | null> {
+  const db = await createSupabaseServer()
   const [progressResult, quota] = await Promise.all([
-    supabase
+    db
       .from('user_progress')
       .select(
         `id, problem_id, status, hints_used, tier1_calls, tier2_calls,

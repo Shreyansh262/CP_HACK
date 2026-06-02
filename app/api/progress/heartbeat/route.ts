@@ -6,26 +6,15 @@ import { requireUser, isUuid } from '@/lib/progress';
  * Body: { problem_id: uuid, last_ping_at?: ISO string }
  * Returns: { ok: true, server_now: ISO string }
  *
- * Time-tracking model (Part 2 §21.2):
- *   - Client pings every 30s while problem tab is focused.
- *   - First ping: no last_ping_at. Server adds 0, returns server_now.
- *   - Subsequent pings: server computes delta = now - last_ping_at, clamps
- *     to [0, 35] seconds, adds to time_spent_seconds.
- *   - Client stores the returned server_now as its next last_ping_at.
- *
- * This avoids:
- *   - Client clock drift / spoofing (we never trust client-supplied durations).
- *   - Over-counting when tab is backgrounded mid-interval (delta caps at 35s).
- *   - Under-counting when client pings late (still bounded but accurate to 35s).
+ * Client sends last_ping_at (the server_now from the previous response).
+ * Server computes delta = now - last_ping_at, clamps to [0, 35]s, increments
+ * time_spent_seconds. Client stores returned server_now for the next ping.
  */
-
-const MAX_HEARTBEAT_DELTA_SEC = 35;
-
 export async function POST(req: Request) {
   const auth = await requireUser();
   if ('error' in auth) return auth.error;
 
-  let body: { problem_id?: string; last_ping_at?: string | null };
+  let body: { problem_id?: string; last_ping_at?: string };
   try {
     body = await req.json();
   } catch {
@@ -36,49 +25,46 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid_problem_id' }, { status: 400 });
   }
 
-  const now = new Date();
-  let deltaSec = 0;
+  const serverNow = new Date();
 
-  if (body.last_ping_at) {
-    const prev = new Date(body.last_ping_at);
-    if (!Number.isNaN(prev.getTime())) {
-      const raw = Math.floor((now.getTime() - prev.getTime()) / 1000);
-      deltaSec = Math.max(0, Math.min(raw, MAX_HEARTBEAT_DELTA_SEC));
-    }
-  }
+  // Ensure row exists
+  const { error: ensureError } = await auth.db
+    .from('user_progress')
+    .upsert(
+      { user_id: auth.userId, problem_id: body.problem_id, status: 'attempted' },
+      { onConflict: 'user_id,problem_id', ignoreDuplicates: true },
+    );
 
-  if (deltaSec === 0) {
-    // First ping or zero delta — still ensure a row exists so subsequent pings
-    // have something to add to, but skip the increment.
-    const ensure = await auth.admin
-      .from('user_progress')
-      .upsert(
-        {
-          user_id: auth.userId,
-          problem_id: body.problem_id,
-          status: 'attempted',
-        },
-        { onConflict: 'user_id,problem_id', ignoreDuplicates: true },
-      );
-    if (ensure.error) {
-      console.error('[progress/heartbeat:ensure]', ensure.error);
-      return NextResponse.json({ error: 'db_error' }, { status: 500 });
-    }
-    return NextResponse.json({ ok: true, server_now: now.toISOString() });
-  }
-
-  // Increment via RPC for atomic addition. Falls back to read-modify-write if
-  // the RPC isn't installed — but we install it. See migration 0003 below.
-  const { error } = await auth.admin.rpc('increment_time_spent', {
-    p_user_id: auth.userId,
-    p_problem_id: body.problem_id,
-    p_seconds: deltaSec,
-  });
-
-  if (error) {
-    console.error('[progress/heartbeat:rpc]', error);
+  if (ensureError) {
+    console.error('[progress/heartbeat:ensure]', ensureError);
     return NextResponse.json({ error: 'db_error' }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, server_now: now.toISOString() });
+  // Compute clamped delta
+  let deltaSeconds = 0;
+  if (body.last_ping_at) {
+    const last = new Date(body.last_ping_at);
+    if (!isNaN(last.getTime())) {
+      deltaSeconds = Math.min(
+        35,
+        Math.max(0, Math.floor((serverNow.getTime() - last.getTime()) / 1000)),
+      );
+    }
+  }
+
+  // Increment time_spent_seconds via RPC (atomic)
+  if (deltaSeconds > 0) {
+    const { error: rpcError } = await auth.db.rpc('increment_time_spent', {
+      p_user_id: auth.userId,
+      p_problem_id: body.problem_id,
+      p_seconds: deltaSeconds,
+    });
+
+    if (rpcError) {
+      console.error('[progress/heartbeat:rpc]', rpcError);
+      // Non-fatal — return server_now so client can continue pinging
+    }
+  }
+
+  return NextResponse.json({ ok: true, server_now: serverNow.toISOString() });
 }

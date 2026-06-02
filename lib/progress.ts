@@ -1,26 +1,28 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase-server';
-import { supabase as supabaseAdmin } from '@/lib/supabase';
 
 /**
  * Resolve the authenticated user for a progress route.
- * Returns either { userId } on success or a NextResponse to return directly.
  *
- * Pattern: read auth from the SSR cookie client (trustworthy), then perform
- * writes via the service-role admin client (bypasses RLS, atomic).
+ * KEY CHANGE from original: returns the SSR client (user JWT) for writes,
+ * NOT the service-role admin client. Supabase RLS is designed for this pattern:
+ * the user's JWT is in the cookie, auth.uid() matches user_id in policies,
+ * and writes succeed without needing service_role bypass.
  */
-export async function requireUser(): Promise<
-  | { userId: string; admin: typeof supabaseAdmin }
-  | { error: NextResponse }
-> {
-  const sb = await createSupabaseServer();
-  const { data: { user }, error } = await sb.auth.getUser();
+export async function requireUser() {
+  const db = await createSupabaseServer();
+  const {
+    data: { user },
+    error,
+  } = await db.auth.getUser();
+
   if (error || !user) {
     return {
       error: NextResponse.json({ error: 'unauthorized' }, { status: 401 }),
     };
   }
-  return { userId: user.id, admin: supabaseAdmin };
+
+  return { userId: user.id, db };
 }
 
 /** UUID v4-ish shape check (Supabase always returns v4). */

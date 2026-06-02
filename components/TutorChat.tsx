@@ -60,9 +60,8 @@ function QuotaBadge({
 }) {
   return (
     <span
-      className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium ${
-        exhausted ? 'bg-zinc-800 text-zinc-600' : 'bg-zinc-800 text-zinc-300'
-      }`}
+      className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium ${exhausted ? 'bg-zinc-800 text-zinc-600' : 'bg-zinc-800 text-zinc-300'
+        }`}
     >
       {emoji} {label} {remaining !== null ? `(${remaining})` : '—'}
     </span>
@@ -82,15 +81,14 @@ function ChatMessage({
   return (
     <div className={`flex flex-col gap-1 ${isUser ? 'items-end' : 'items-start'}`}>
       <div
-        className={`max-w-[90%] rounded-lg px-3 py-2 text-xs leading-relaxed ${
-          isUser
-            ? 'bg-blue-600 text-white'
-            : message.source === 'stored'
+        className={`max-w-[90%] rounded-lg px-3 py-2 text-xs leading-relaxed ${isUser
+          ? 'bg-blue-600 text-white'
+          : message.source === 'stored'
             ? 'border border-zinc-700 bg-zinc-900 text-zinc-200'
             : message.source === 'system'
-            ? 'text-zinc-500'
-            : 'border border-zinc-700 bg-zinc-900 text-zinc-200'
-        }`}
+              ? 'text-zinc-500'
+              : 'border border-zinc-700 bg-zinc-900 text-zinc-200'
+          }`}
       >
         {message.source === 'system' && !isUser ? (
           <span>{message.content}</span>
@@ -126,8 +124,12 @@ function ChatMessage({
               key={chip}
               onClick={() => onChip(chip)}
               suppressHydrationWarning
-              className="rounded border border-zinc-700 px-2 py-1 text-[10px] text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
-            >
+              className={`rounded border px-2.5 py-1 text-xs font-medium transition-colors ${chip.startsWith('Reveal Hint')
+                  ? 'border-amber-800 bg-amber-950/40 text-amber-400 hover:border-amber-600 hover:text-amber-300'
+                  : chip === 'Review my code' || chip === 'Deep analysis'
+                    ? 'border-indigo-800 bg-indigo-950/40 text-indigo-400 hover:border-indigo-600 hover:text-indigo-300'
+                    : 'border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+                }`}            >
               {chip}
             </button>
           ))}
@@ -167,8 +169,8 @@ export default function TutorChat({
   user: User | null;
 }) {
   const initialChips = user
-    ? ['Review my code ⚡', 'Deep analysis 🔬', 'Reveal Hint 1', 'Reveal Hint 2', 'Reveal Hint 3']
-    : ['Reveal Hint 1', 'Reveal Hint 2', 'Reveal Hint 3'];
+    ? ['Review my code ⚡', 'Deep analysis 🔬', 'Reveal Hint 1']
+    : ['Reveal Hint 1'];
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -181,6 +183,7 @@ export default function TutorChat({
   ]);
 
   const [quota, setQuota] = useState<QuotaState | null>(null);
+  const [maxHintRevealed, setMaxHintRevealed] = useState(0); // 0=none, 1=h1, 2=h2, 3=h3
   const [isLoading, setIsLoading] = useState(false);
   const [inputText, setInputText] = useState('');
   const [downgradeNote, setDowngradeNote] = useState<string | null>(null);
@@ -200,7 +203,7 @@ export default function TutorChat({
     fetch('/api/quota')
       .then((r) => r.json())
       .then((d) => { if ('t1Remaining' in d) setQuota(d as QuotaState); })
-      .catch(() => {});
+      .catch(() => { });
   }, [user]);
 
   // ── Message helper ─────────────────────────────────────────────────────────
@@ -210,41 +213,6 @@ export default function TutorChat({
   }, []);
 
   // ── Stored-hint reveal ─────────────────────────────────────────────────────
-
-  const revealHint = useCallback(
-    (level: number) => {
-      const hint = (problem.hints ?? []).find((h: Hint) => h.level === level);
-      if (!hint) {
-        push({
-          role: 'assistant',
-          content: `Hint ${level} isn't stored for this problem.`,
-          source: 'system',
-        });
-        return;
-      }
-
-      push({ role: 'user', content: `Reveal Hint ${level}`, source: 'system' });
-      push({
-        role: 'assistant',
-        content: `**Hint ${level}** *(${hintLabel(level)})*\n\n${hint.text}`,
-        source: 'stored',
-        chips:
-          level < (problem.hints ?? []).length
-            ? [`Reveal Hint ${level + 1}`, 'Got it, I can work from here']
-            : ['Got it, I can work from here'],
-      });
-
-      // ── Phase 4: track hint reveal ──────────────────────────────────────
-      if (user) {
-        fetch('/api/progress/hint-revealed', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ problem_id: problem.id, level }),
-        }).catch(() => {});
-      }
-    },
-    [problem.hints, problem.id, user, push],
-  );
 
   // ── AI review call (Phase 4: SSE streaming) ────────────────────────────────
 
@@ -358,17 +326,17 @@ export default function TutorChat({
                   prev.map((m) =>
                     m.id === placeholderId
                       ? {
-                          ...m,
-                          content,
-                          source:
-                            eTier === 'deep'
-                              ? 'ai-t2'
-                              : eTier === 'quick'
+                        ...m,
+                        content,
+                        source:
+                          eTier === 'deep'
+                            ? 'ai-t2'
+                            : eTier === 'quick'
                               ? 'ai-t1'
                               : 'system',
-                          chips,
-                          streaming: false,
-                        }
+                        chips,
+                        streaming: false,
+                      }
                       : m,
                   ),
                 );
@@ -384,8 +352,8 @@ export default function TutorChat({
                   activeTier: (eTier === 'deep'
                     ? 'deep'
                     : eTier === 'quick'
-                    ? 'quick'
-                    : 'zero') as QuotaState['activeTier'],
+                      ? 'quick'
+                      : 'zero') as QuotaState['activeTier'],
                 });
               }
 
@@ -400,15 +368,15 @@ export default function TutorChat({
         setMessages((prev) =>
           firstToken
             ? [
-                ...prev,
-                {
-                  id: placeholderId,
-                  role: 'assistant',
-                  content: 'Network error. Please check your connection and try again.',
-                  source: 'system',
-                  chips: ['Try again'],
-                },
-              ]
+              ...prev,
+              {
+                id: placeholderId,
+                role: 'assistant',
+                content: 'Network error. Please check your connection and try again.',
+                source: 'system',
+                chips: ['Try again'],
+              },
+            ]
             : prev.filter((m) => m.id !== placeholderId),
         );
         if (!firstToken) {
@@ -426,13 +394,52 @@ export default function TutorChat({
     [user, problem, code, language, push],
   );
 
+  function revealHint(idx: number) {
+    // Sequential guard — can't skip hints
+    if (idx > maxHintRevealed + 1) {
+      push({
+        role: 'assistant',
+        source: 'system',
+        content: `Please reveal Hint ${maxHintRevealed + 1} first — hints build on each other.`,
+        chips: [`Reveal Hint ${maxHintRevealed + 1}`],
+      });
+      return;
+    }
+
+    const hint = problem.hints?.[idx];
+    if (!hint) return;
+
+    const nextChips = idx < 2 ? [`Reveal Hint ${idx + 2}`] : [];
+    const aiChips = user ? ['Review my code', 'Deep analysis'] : [];
+
+    push({
+      role: 'assistant',
+      source: 'stored',
+      content: `**Hint ${idx + 1}:** ${hint.text}`,
+      chips: [...nextChips, ...aiChips],
+    });
+
+    setMaxHintRevealed(idx + 1);
+
+    if (user) {
+      fetch('/api/progress/hint-revealed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ problem_id: problem.id }),
+      }).catch(() => { });
+    }
+  }
+
   // ── Chip dispatcher ────────────────────────────────────────────────────────
 
   const handleChip = useCallback(
     async (chip: string) => {
       if (chip.startsWith('Reveal Hint ')) {
         const level = parseInt(chip.replace('Reveal Hint ', ''), 10);
-        if (!Number.isNaN(level)) { revealHint(level); return; }
+        if (!Number.isNaN(level)) {
+          revealHint(level - 1);
+          return;
+        }
       }
 
       if (chip === 'Sign in with Google') {
@@ -465,8 +472,8 @@ export default function TutorChat({
         chip === 'Review my code ⚡'
           ? 'Please review my current code and give me one targeted piece of feedback.'
           : chip === 'Deep analysis 🔬'
-          ? 'Please deeply analyse my code: approach, time complexity, and any subtle edge cases.'
-          : chip;
+            ? 'Please deeply analyse my code: approach, time complexity, and any subtle edge cases.'
+            : chip;
 
       await callReview(tier, intent, chip);
     },

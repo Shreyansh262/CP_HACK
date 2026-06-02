@@ -9,11 +9,12 @@ type Props = { params: Promise<{ id: string }> };
 export default async function ProblemPage({ params }: Props) {
   const { id } = await params;
 
-  // Fetch problem and user in parallel.
   const [problemResult, user] = await Promise.all([
     supabase
       .from('competitive_problems')
-      .select('id, title, problem_statement, difficulty, tags, hints, edge_cases, external_id, source, created_at')
+      .select(
+        'id, title, problem_statement, difficulty, tags, hints, edge_cases, external_id, source, created_at',
+      )
       .eq('id', id)
       .single(),
     getAuthUser(),
@@ -25,24 +26,32 @@ export default async function ProblemPage({ params }: Props) {
   const hints: Hint[] = Array.isArray(problem.hints) ? problem.hints : [];
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      {/* Problem header */}
-      <header className="flex shrink-0 items-center gap-3 border-b border-zinc-800 px-4 py-2">
-        <a href="/" className="text-xs text-zinc-500 hover:text-zinc-300">
+    // This div fills the remaining viewport below the sticky header.
+    // overflow-hidden + min-h-0 forces the three inner panels to scroll
+    // individually instead of the whole page scrolling.
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      {/* Problem sub-header */}
+      <div className="flex shrink-0 items-center gap-3 border-b border-zinc-800 bg-zinc-950 px-4 py-2">
+        <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-300">
           ← Problems
-        </a>
-        <span className="text-xs text-zinc-600">·</span>
+        </Link>
+        <span className="text-zinc-700">·</span>
         <h1 className="truncate text-sm font-semibold text-zinc-100">
           {problem.external_id ? `${problem.external_id} · ` : ''}
           {problem.title}
         </h1>
-        <span className="ml-auto text-xs text-zinc-500">
-          {problem.difficulty ?? '—'} ·{' '}
-          {[...new Set(problem.tags ?? [])].slice(0, 4).join(', ')}
+        <span className="ml-auto shrink-0 text-sm text-zinc-500">
+          {problem.difficulty ?? '—'}
+          {problem.tags && problem.tags.length > 0
+            ? ' · ' + [...new Set(problem.tags)].slice(0, 3).join(', ')
+            : ''}
         </span>
-      </header>
+      </div>
 
       <ProblemView problem={{ ...problem, hints }} user={user} />
     </div>
   );
 }
+
+// Need Link import
+import Link from 'next/link';

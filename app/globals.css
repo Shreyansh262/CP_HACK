@@ -25,3 +25,22 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+/* Custom scrollbar — replaces the white default */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #16163d;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6363c0;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #ba7214 transparent;
+}

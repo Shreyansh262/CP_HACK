@@ -74,6 +74,48 @@ export default function ProblemView({
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastPingRef = useRef<string | null>(null);
 
+  // Panel widths as percentages (middle takes whatever is left)
+  const [leftPct, setLeftPct] = useState(30);
+  const [rightPct, setRightPct] = useState(28);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef<'left' | 'right' | null>(null);
+  const dragStartX = useRef(0);
+  const dragStartPct = useRef(0);
+
+  useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (!dragging.current || !containerRef.current) return;
+      const containerW = containerRef.current.getBoundingClientRect().width;
+      const dx = e.clientX - dragStartX.current;
+      const deltaPct = (dx / containerW) * 100;
+
+      if (dragging.current === 'left') {
+        setLeftPct(Math.max(18, Math.min(45, dragStartPct.current + deltaPct)));
+      } else {
+        setRightPct(Math.max(18, Math.min(45, dragStartPct.current - deltaPct)));
+      }
+    }
+    function onMouseUp() {
+      dragging.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
+  function startDrag(e: React.MouseEvent, side: 'left' | 'right') {
+    e.preventDefault();
+    dragging.current = side;
+    dragStartX.current = e.clientX;
+    dragStartPct.current = side === 'left' ? leftPct : rightPct;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }
   // Fire /open once on mount for signed-in users.
   useEffect(() => {
     if (!user) return;
@@ -81,7 +123,7 @@ export default function ProblemView({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ problem_id: problem.id }),
-    }).catch(() => {});
+    }).catch(() => { });
   }, [user, problem.id]);
 
   // Heartbeat: every 30s while tab is focused.
@@ -98,7 +140,7 @@ export default function ProblemView({
         .then((d: { server_now?: string }) => {
           if (d.server_now) lastPingRef.current = d.server_now;
         })
-        .catch(() => {});
+        .catch(() => { });
     };
 
     const start = () => {
@@ -171,17 +213,25 @@ export default function ProblemView({
       body: JSON.stringify({ problem_id: problem.id }),
     })
       .then(() => setMarkedSolved(true))
-      .catch(() => {});
+      .catch(() => { });
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="flex min-h-0 flex-1 overflow-hidden">
+    <div ref={containerRef} className="flex min-h-0 flex-1 overflow-hidden">
       {/* Panel 1 — Problem statement */}
-      <div className="w-100 shrink-0 overflow-y-auto border-r border-zinc-800">
-        <ProblemStatement markdown={problem.problem_statement} />
+      <div
+        className="shrink-0 overflow-y-auto border-zinc-800"
+        style={{ width: `${leftPct}%` }}
+      >
+        <div className="p-4">
+          <ProblemStatement markdown={problem.problem_statement} />
+        </div>
       </div>
-
+      <div
+        className="group w-1 shrink-0 cursor-col-resize bg-zinc-800 transition-colors hover:bg-blue-500 active:bg-blue-400"
+        onMouseDown={(e) => startDrag(e, 'left')}
+      />
       {/* Panel 2 — Editor */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Toolbar */}
@@ -208,11 +258,10 @@ export default function ProblemView({
               onClick={handleMarkSolved}
               disabled={markedSolved}
               suppressHydrationWarning
-              className={`ml-auto rounded border px-2 py-0.5 text-[11px] transition-colors ${
-                markedSolved
-                  ? 'border-green-800 text-green-600 cursor-default'
-                  : 'border-green-800 text-green-400 hover:border-green-600 hover:text-green-300'
-              }`}
+              className={`ml-auto rounded border px-2 py-0.5 text-[11px] transition-colors ${markedSolved
+                ? 'border-green-800 text-green-600 cursor-default'
+                : 'border-green-800 text-green-400 hover:border-green-600 hover:text-green-300'
+                }`}
             >
               {markedSolved ? '✓ Solved' : '✓ Mark solved'}
             </button>
@@ -224,9 +273,15 @@ export default function ProblemView({
           <CodeEditor language={language} value={code} onChange={setCode} />
         </div>
       </div>
-
+      <div
+        className="group w-1 shrink-0 cursor-col-resize bg-zinc-800 transition-colors hover:bg-blue-500 active:bg-blue-400"
+        onMouseDown={(e) => startDrag(e, 'right')}
+      />
       {/* Panel 3 — Tutor chat */}
-      <div className="w-90 shrink-0 border-l border-zinc-800">
+      <div
+        className="flex shrink-0 flex-col"
+        style={{ width: `${rightPct}%` }}
+      >
         <TutorChat
           problem={problem}
           code={code}

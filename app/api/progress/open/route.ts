@@ -5,9 +5,7 @@ import { requireUser, isUuid } from '@/lib/progress';
  * POST /api/progress/open
  * Body: { problem_id: uuid }
  *
- * Marks that the user opened a problem. Idempotent — if a row already exists,
- * leaves status/hints/solved_at untouched (we don't want re-opening a solved
- * problem to demote it back to 'attempted').
+ * Upsert attempted row on problem open. Idempotent — never demotes a solved row.
  */
 export async function POST(req: Request) {
   const auth = await requireUser();
@@ -24,7 +22,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid_problem_id' }, { status: 400 });
   }
 
-  const { error } = await auth.admin
+  const { error } = await auth.db
     .from('user_progress')
     .upsert(
       {
@@ -32,11 +30,7 @@ export async function POST(req: Request) {
         problem_id: body.problem_id,
         status: 'attempted',
       },
-      {
-        onConflict: 'user_id,problem_id',
-        // Do not overwrite existing status / counters / solved_at on re-open.
-        ignoreDuplicates: true,
-      },
+      { onConflict: 'user_id,problem_id', ignoreDuplicates: true },
     );
 
   if (error) {
