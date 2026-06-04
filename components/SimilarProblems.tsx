@@ -59,7 +59,7 @@ export default function SimilarProblems({ problemId, source = 'seeded' }: Props)
       {problems.map((p) => {
         const href = source === 'unseen'
           ? `/problems/unseen/${p.id}`
-          : `/problems/${p.id}`;
+          : `/problems/seen/${p.id}`;
 
         const diffNum = p.difficulty ? parseInt(p.difficulty, 10) : null;
         const diffColor = !diffNum

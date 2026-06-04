@@ -2,14 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
 import crypto from 'crypto';
 import { GoogleGenerativeAI, TaskType } from '@google/generative-ai';
-import { createClient } from '@supabase/supabase-js';
-
-// ── Clients ───────────────────────────────────────────────────────────────────
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+import { supabase } from '@/lib/supabase';
 
 const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 

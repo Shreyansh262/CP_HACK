@@ -34,13 +34,13 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #16163d;
+  background: #9999ab;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #6363c0;
+  background: #2f2f34;
 }
 * {
   scrollbar-width: thin;
-  scrollbar-color: #ba7214 transparent;
+  scrollbar-color: #928c83 transparent;
 }

@@ -174,7 +174,7 @@ export default async function HomePage({
             return (
               <Link
                 key={p.id}
-                href={`/problems/${p.id}`}
+                href={`/problems/seen/${p.id}`}
                 className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-zinc-900"
               >
                 {/* Status badge */}

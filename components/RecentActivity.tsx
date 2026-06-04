@@ -2,8 +2,6 @@
 
 import type { ProgressRow } from '@/lib/profile-queries';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function StatusBadge({ status }: { status: string }) {
   if (status === 'solved')
     return (
@@ -38,8 +36,6 @@ function fmtDate(iso: string): string {
   });
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export default function RecentActivity({ rows }: { rows: ProgressRow[] }) {
   if (rows.length === 0) {
     return (
@@ -51,35 +47,45 @@ export default function RecentActivity({ rows }: { rows: ProgressRow[] }) {
 
   return (
     <div className="divide-y divide-zinc-800 rounded-lg border border-zinc-800">
-      {rows.map((row) => (
-        <a
-          key={row.id}
-          href={`/problems/${row.problem_id}`}
-          className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-900"
-        >
-          {/* Problem name */}
-          <div className="min-w-0 flex-1">
-            <span className="block truncate text-sm text-zinc-200">
-              {row.competitive_problems?.external_id
-                ? `${row.competitive_problems.external_id} · `
-                : ''}
-              {row.competitive_problems?.title ?? 'Unknown problem'}
-            </span>
-            <div className="mt-0.5 flex flex-wrap gap-3 text-[10px] text-zinc-500">
-              <span>⏱ {fmtTime(row.time_spent_seconds)}</span>
-              {row.hints_used > 0 && <span>💡 {row.hints_used} hint{row.hints_used !== 1 ? 's' : ''}</span>}
-              {(row.tier1_calls > 0 || row.tier2_calls > 0) && (
-                <span>
-                  AI ⚡{row.tier1_calls} 🔬{row.tier2_calls}
-                </span>
-              )}
-              <span>{fmtDate(row.updated_at)}</span>
-            </div>
-          </div>
+      {rows.map((row) => {
+        const isUnseen = !!row.unseen_problem_id;
+        const href = isUnseen
+          ? `/problems/unseen/${row.unseen_problem_id}`
+          : `/problems/seen/${row.problem_id}`;
+        const title = isUnseen
+          ? row.unseen_problems?.title ?? 'Unseen problem'
+          : row.competitive_problems?.title ?? 'Unknown problem';
+        const externalId = isUnseen ? null : row.competitive_problems?.external_id;
 
-          <StatusBadge status={row.status} />
-        </a>
-      ))}
+        return (
+          <a
+            key={row.id}
+            href={href}
+            className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-900"
+          >
+            <div className="min-w-0 flex-1">
+              <span className="block truncate text-sm text-zinc-200">
+                {externalId ? `${externalId} · ` : ''}
+                {title}
+              </span>
+              <div className="mt-0.5 flex flex-wrap gap-3 text-[10px] text-zinc-500">
+                <span>⏱ {fmtTime(row.time_spent_seconds)}</span>
+                {row.hints_used > 0 && (
+                  <span>
+                    💡 {row.hints_used} hint{row.hints_used !== 1 ? 's' : ''}
+                  </span>
+                )}
+                {(row.tier1_calls > 0 || row.tier2_calls > 0) && (
+                  <span>AI ⚡{row.tier1_calls} 🔬{row.tier2_calls}</span>
+                )}
+                <span>{fmtDate(row.updated_at)}</span>
+              </div>
+            </div>
+
+            <StatusBadge status={row.status} />
+          </a>
+        );
+      })}
     </div>
   );
 }

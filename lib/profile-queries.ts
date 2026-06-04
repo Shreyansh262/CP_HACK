@@ -14,6 +14,7 @@ import { getQuotaState } from '@/lib/quota';
 export type ProgressRow = {
   id: string;
   problem_id: string;
+  unseen_problem_id: string | null;
   status: 'attempted' | 'solved' | 'given_up';
   hints_used: number;
   tier1_calls: number;
@@ -28,6 +29,12 @@ export type ProgressRow = {
     difficulty: string | null;
     tags: string[] | null;
     external_id: string | null;
+  } | null;
+  unseen_problems: {
+    id: string;
+    title: string;
+    difficulty: string | null;
+    tags: string[] | null;
   } | null;
 };
 
@@ -74,9 +81,10 @@ export async function fetchProfileData(
     db
       .from('user_progress')
       .select(
-        `id, problem_id, status, hints_used, tier1_calls, tier2_calls,
-         time_spent_seconds, first_opened_at, solved_at, updated_at,
-         competitive_problems(id, title, difficulty, tags, external_id)`,
+        `id, problem_id, unseen_problem_id, status, hints_used, tier1_calls, tier2_calls,
+        time_spent_seconds, first_opened_at, solved_at, updated_at,
+        competitive_problems(id, title, difficulty, tags, external_id),
+        unseen_problems(id, title, difficulty, tags)`,
       )
       .eq('user_id', userId)
       .order('updated_at', { ascending: false }),

@@ -6,16 +6,16 @@ import UnseenProblemView from './UnseenProblemView';
 
 // Admin client — bypasses RLS for problem fetch (read-only)
 const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function UnseenProblemPage({ params }: Props) {
-  const { id } = params;
+  const { id } = await params;
 
   const { data: problem } = await supabaseAdmin
     .from('unseen_problems')
