@@ -62,7 +62,7 @@ export default function HintPanel({ hints }: { hints: Hint[] }) {
                 </ReactMarkdown>
               </div>
             ) : (
-              <p className="select-none text-sm leading-relaxed text-zinc-700 blur-[4px]">
+              <p className="select-none text-sm leading-relaxed text-zinc-700 blur-xs">
                 {h.text.slice(0, 120)}…
               </p>
             )}
