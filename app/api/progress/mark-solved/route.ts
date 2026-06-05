@@ -57,7 +57,8 @@ export async function POST(req: NextRequest) {
 
   let error = null;
   if (!updatedRows || updatedRows.length === 0) {
-    const insertResult = await supabase.from('user_progress').insert(payload);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const insertResult = await supabase.from('user_progress').insert(payload as any);
     error = insertResult.error;
   }
 
