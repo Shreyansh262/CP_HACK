@@ -89,7 +89,7 @@ The fallback chain is automatic. Users always see why their tier changed and how
 
 ## Data
 
-**300 curated problems** from `open-r1/codeforces` (ODC-By 4.0), filtered to ratings 1000–2500 across core algorithm tags. Each problem has three progressive hints generated offline via Flash-Lite (`thinking_budget=0`) and stored as JSONB — no AI cost at read time.
+**1200+ curated problems** from `open-r1/codeforces` (ODC-By 4.0), filtered to ratings 1000–2500 across core algorithm tags. Each problem has three progressive hints generated offline via Flash-Lite (`thinking_budget=0`) and stored as JSONB — no AI cost at read time.
 
 Dataset attribution: *Problems sourced from [open-r1/codeforces](https://huggingface.co/datasets/open-r1/codeforces) (ODC-By 4.0).*
 
