@@ -46,14 +46,14 @@ export default function AuthButton({ user }: { user: User | null }) {
   if (user) {
     return (
       <div className="flex items-center gap-3">
-        <span className="max-w-45 truncate text-xs text-zinc-400">
+        <span className="max-w-45 truncate text-sm text-zinc-400">
           {user.email}
         </span>
         <button
           onClick={signOut}
           disabled={loading}
           suppressHydrationWarning
-          className="rounded border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-50"
+          className="rounded border border-zinc-700 px-2.5 py-1 text-sm text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-50"
         >
           Sign out
         </button>

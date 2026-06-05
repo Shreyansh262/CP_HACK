@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AI Coding Tutor — Phase 1 Seed Script
+CF BUDDY — Phase 1 Seed Script
 ======================================
 Loads the open-r1/codeforces dataset (ODC-By 4.0), generates 3-level progressive
 hints per problem via Gemini 2.5 Flash, and upserts to Supabase.
@@ -198,7 +198,7 @@ def check_env():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Seed the AI Coding Tutor problem database.")
+    parser = argparse.ArgumentParser(description="Seed the CF BUDDY problem database.")
     parser.add_argument("--inspect", action="store_true",
                         help="Print dataset column names and one sample row, then exit.")
     parser.add_argument("--limit", type=int, default=300,

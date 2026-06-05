@@ -1,4 +1,4 @@
-# AI Coding Tutor — Seed Script Dependencies
+# CF BUDDY — Seed Script Dependencies
 # Install with: pip install -r requirements_seed.txt
 # Python 3.11+ recommended
 
