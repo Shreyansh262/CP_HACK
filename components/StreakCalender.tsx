@@ -167,7 +167,7 @@ export default function StreakCalendar({
       </svg>
 
       {/* Legend */}
-      <div className="mt-1 flex items-center gap-1.5 text-[10px] text-zinc-500">
+      <div className="mt-1 flex items-center gap-1.5 text-[13px] text-zinc-500">
         <span>Less</span>
         {[0, 1, 2, 3].map((n) => (
           <div

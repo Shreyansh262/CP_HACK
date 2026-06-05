@@ -38,14 +38,14 @@ export default function HintPanel({ hints }: { hints: Hint[] }) {
             <div className="mb-2 flex items-center justify-between">
               <div className="text-xs font-medium text-zinc-400">
                 Hint {h.level}
-                <span className="ml-2 text-[10px] uppercase tracking-wide text-zinc-600">
+                <span className="ml-2 text-[13px] uppercase tracking-wide text-zinc-600">
                   {h.level === 1 ? 'nudge' : h.level === 2 ? 'approach' : 'key insight'}
                 </span>
               </div>
               {!unlocked && nextUp && (
                 <button
                   onClick={() => setRevealed(h.level)}
-                  className="rounded bg-zinc-100 px-2 py-1 text-[11px] font-medium text-zinc-900 hover:bg-white"
+                  className="rounded bg-zinc-100 px-2 py-1 text-[14px] font-medium text-zinc-900 hover:bg-white"
                 >
                   Reveal
                 </button>
@@ -53,7 +53,7 @@ export default function HintPanel({ hints }: { hints: Hint[] }) {
             </div>
 
             {unlocked ? (
-              <div className="prose prose-invert prose-sm max-w-none text-zinc-200 [&_p]:my-1 [&_p]:leading-relaxed">
+              <div className="prose prose-invert prose-base max-w-none text-zinc-200 [&_p]:my-1 [&_p]:leading-relaxed">
                 <ReactMarkdown
                   remarkPlugins={[remarkMath]}
                   rehypePlugins={[rehypeKatex]}
@@ -73,13 +73,13 @@ export default function HintPanel({ hints }: { hints: Hint[] }) {
       {revealed > 0 && (
         <button
           onClick={() => setRevealed(0)}
-          className="mt-2 text-[11px] text-zinc-500 hover:text-zinc-300"
+          className="mt-2 text-[14px] text-zinc-500 hover:text-zinc-300"
         >
           Reset hints
         </button>
       )}
 
-      <div className="pt-4 text-[11px] leading-relaxed text-zinc-600">
+      <div className="pt-4 text-[14px] leading-relaxed text-zinc-600">
         Hints are progressive: try the next one only if you're truly stuck. The
         tutor will never reveal the full solution.
       </div>

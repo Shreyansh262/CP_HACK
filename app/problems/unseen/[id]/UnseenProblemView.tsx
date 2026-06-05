@@ -139,7 +139,7 @@ export default function UnseenProblemView({ problem, user }: Props) {
               <span className="ml-2 text-xs text-zinc-500">{problem.difficulty}</span>
             )}
           </div>
-          <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">Unseen</span>
+          <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[13px] text-zinc-400">Unseen</span>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -153,14 +153,14 @@ export default function UnseenProblemView({ problem, user }: Props) {
               <p className="mb-2 text-xs font-medium text-zinc-400">Sample Cases</p>
               {samples.map((s, i) => (
                 <div key={i} className="mb-3">
-                  <p className="mb-1 text-[10px] text-zinc-500">Case {i + 1}</p>
+                  <p className="mb-1 text-[13px] text-zinc-500">Case {i + 1}</p>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <p className="mb-0.5 text-[10px] text-zinc-600">Input</p>
+                      <p className="mb-0.5 text-[13px] text-zinc-600">Input</p>
                       <pre className="overflow-x-auto whitespace-pre rounded bg-zinc-800 p-2 text-xs text-zinc-200">{s.input}</pre>
                     </div>
                     <div>
-                      <p className="mb-0.5 text-[10px] text-zinc-600">Output</p>
+                      <p className="mb-0.5 text-[13px] text-zinc-600">Output</p>
                       <pre className="overflow-x-auto whitespace-pre rounded bg-zinc-800 p-2 text-xs text-zinc-200">{s.output}</pre>
                     </div>
                   </div>

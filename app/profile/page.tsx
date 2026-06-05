@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-      <div className="text-2xl font-bold tabular-nums text-zinc-100">{value}</div>
+      <div className="text-3xl font-bold tabular-nums text-zinc-100">{value}</div>
       <div className="mt-1 text-xs text-zinc-500">{label}</div>
     </div>
   );
@@ -26,7 +26,7 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="mb-3 text-sm font-semibold text-zinc-300">{title}</h2>
+      <h2 className="mb-3 text-base font-semibold text-zinc-300">{title}</h2>
       {children}
     </section>
   );
@@ -46,7 +46,7 @@ export default async function ProfilePage() {
   if (!data) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-sm text-zinc-500">
+        <p className="text-base text-zinc-500">
           Could not load profile data. Please refresh.
         </p>
       </div>
@@ -54,7 +54,7 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 px-4 py-8">
+    <div className="mx-auto max-w-5xl space-y-8 px-4 py-8">
 
       {/* ── Header stats ── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

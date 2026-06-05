@@ -178,7 +178,7 @@ export default function RunPanel({ code, language, samples, onAllPassed }: Props
       )}
 
       {/* Note */}
-      <p className="text-[10px] text-zinc-600">
+      <p className="text-[13px] text-zinc-600">
         Runs against sample cases only
       </p>
     </div>

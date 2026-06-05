@@ -19,7 +19,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className="dark h-full">
-      <body className="flex h-full flex-col bg-zinc-950 text-[17px] text-zinc-100 antialiased">
+      <body className="flex h-full flex-col bg-zinc-950 text-[18px] text-zinc-100 antialiased">
         {/* ── Header: sticky, links home ── */}
         <header className="sticky top-0 z-40 flex shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-950/95 px-5 py-3 backdrop-blur">
           <Link

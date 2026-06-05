@@ -83,7 +83,7 @@ export default function UnseenProblemInput() {
         <p className="mt-2 text-xs text-red-400">{error}</p>
       )}
 
-      <p className="mt-2 text-[10px] text-zinc-600">
+      <p className="mt-2 text-[13px] text-zinc-600">
         Supports: codeforces.com/problemset/problem/… · codeforces.com/contest/…/problem/…
       </p>
     </div>

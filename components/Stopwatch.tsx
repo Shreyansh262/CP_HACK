@@ -43,11 +43,11 @@ export default function Stopwatch() {
   };
 
   const btn =
-    'rounded border border-zinc-700 px-1.5 py-0.5 text-[11px] text-zinc-300 hover:border-zinc-500 hover:text-zinc-100';
+    'rounded border border-zinc-700 px-2.5 py-1 text-[14px] text-zinc-300 hover:border-zinc-500 hover:text-zinc-100';
 
   return (
     <div className="flex items-center gap-1.5" title="Manual stopwatch (this sitting only — not saved)">
-      <span className="font-mono tabular-nums text-[11px] text-zinc-400">{fmt(elapsedMs)}</span>
+      <span className="font-mono tabular-nums text-[14px] text-zinc-400">{fmt(elapsedMs)}</span>
       {running ? (
         <button onClick={pause} suppressHydrationWarning className={btn}>
           Pause

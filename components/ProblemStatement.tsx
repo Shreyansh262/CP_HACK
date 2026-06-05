@@ -10,7 +10,7 @@ export default function ProblemStatement({ markdown }: { markdown: string }) {
   const normalizedMarkdown = markdown.replace(/∗/g, '*');
 
   return (
-    <article className="prose prose-invert prose-sm max-w-none whitespace-pre-wrap prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-800">
+    <article className="prose prose-invert prose-base max-w-none whitespace-pre-wrap prose-pre:bg-zinc-900 prose-pre:border prose-pre:border-zinc-800">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}

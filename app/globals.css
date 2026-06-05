@@ -13,6 +13,20 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Larger type scale — app text was too small to read comfortably. Bumps the
+   small end (xs/sm/base/lg) ~1 step; xl/2xl left default so the header keeps
+   its size. Affects every text-xs/sm/base/lg utility app-wide. */
+@theme {
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.15rem;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.4rem;
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.65rem;
+  --text-lg: 1.1875rem;
+  --text-lg--line-height: 1.8rem;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;

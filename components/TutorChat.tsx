@@ -61,7 +61,7 @@ function QuotaBadge({
       ? 'text-violet-300'
       : 'text-blue-300';
   return (
-    <span className={`flex items-center gap-1.5 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium ${text}`}>
+    <span className={`flex items-center gap-1.5 rounded bg-zinc-800 px-1.5 py-0.5 text-[13px] font-medium ${text}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${exhausted ? 'bg-zinc-600' : dot}`} />
       {label} {remaining !== null ? `(${remaining})` : '—'}
     </span>
@@ -99,7 +99,7 @@ function ChatMessage({
             components={{
               p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
               code: ({ children }) => (
-                <code className="rounded bg-zinc-800 px-1 py-0.5 font-mono text-[11px] text-zinc-300">
+                <code className="rounded bg-zinc-800 px-1 py-0.5 font-mono text-[14px] text-zinc-300">
                   {children}
                 </code>
               ),
@@ -536,21 +536,21 @@ export default function TutorChat({
             exhausted={quota?.t1Remaining === 0}
           />
           {quota?.activeTier === 'zero' && (
-            <span className="text-[10px] text-amber-500">All AI used today</span>
+            <span className="text-[13px] text-amber-500">All AI used today</span>
           )}
         </div>
       )}
 
       {/* Downgrade note */}
       {downgradeNote && (
-        <div className="shrink-0 border-b border-amber-900/30 bg-amber-950/20 px-3 py-1.5 text-[11px] text-amber-400">
+        <div className="shrink-0 border-b border-amber-900/30 bg-amber-950/20 px-3 py-1.5 text-[14px] text-amber-400">
           ↓ {downgradeNote}
         </div>
       )}
 
       {/* Privacy notice — shown only to signed-in users (free tier disclosure) */}
       {user && (
-        <div className="shrink-0 px-3 pt-1 text-[10px] text-zinc-600">
+        <div className="shrink-0 px-3 pt-1 text-[13px] text-zinc-600">
           AI prompts may be used by Google for model improvement (free tier).
         </div>
       )}
@@ -595,7 +595,7 @@ export default function TutorChat({
               }
               disabled={isLoading || quota?.t1Remaining === 0}
               suppressHydrationWarning
-              className="flex-1 rounded border border-blue-900 px-2 py-1.5 text-[11px] text-blue-300 hover:border-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex-1 rounded border border-blue-900 px-2 py-1.5 text-[14px] text-blue-300 hover:border-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Review{quota ? ` (${quota.t1Remaining})` : ''}
             </button>
@@ -609,7 +609,7 @@ export default function TutorChat({
               }
               disabled={isLoading || quota?.t2Remaining === 0}
               suppressHydrationWarning
-              className="flex-1 rounded border border-violet-900 px-2 py-1.5 text-[11px] text-violet-300 hover:border-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex-1 rounded border border-violet-900 px-2 py-1.5 text-[14px] text-violet-300 hover:border-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Deep{quota ? ` (${quota.t2Remaining})` : ''}
             </button>

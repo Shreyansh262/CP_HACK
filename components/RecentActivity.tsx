@@ -5,18 +5,18 @@ import type { ProgressRow } from '@/lib/profile-queries';
 function StatusBadge({ status }: { status: string }) {
   if (status === 'solved')
     return (
-      <span className="shrink-0 rounded bg-green-950 px-1.5 py-0.5 text-[10px] font-medium text-green-400">
+      <span className="shrink-0 rounded bg-green-950 px-1.5 py-0.5 text-[13px] font-medium text-green-400">
         Solved
       </span>
     );
   if (status === 'given_up')
     return (
-      <span className="shrink-0 rounded bg-red-950 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
+      <span className="shrink-0 rounded bg-red-950 px-1.5 py-0.5 text-[13px] font-medium text-red-400">
         Given up
       </span>
     );
   return (
-    <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium text-zinc-400">
+    <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[13px] font-medium text-zinc-400">
       Attempted
     </span>
   );
@@ -71,7 +71,7 @@ export default function RecentActivity({ rows }: { rows: ProgressRow[] }) {
                 {externalId ? `${externalId} · ` : ''}
                 {title}
               </span>
-              <div className="mt-0.5 flex flex-wrap gap-3 text-[10px] text-zinc-500">
+              <div className="mt-0.5 flex flex-wrap gap-3 text-[13px] text-zinc-500">
                 <span>⏱ {fmtTime(row.time_spent_seconds)}</span>
                 {row.hints_used > 0 && (
                   <span>

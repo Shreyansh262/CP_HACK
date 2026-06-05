@@ -91,7 +91,7 @@ export default function FilterForm({
             </svg>
             Filters
             {activeCount > 0 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-100 text-[11px] font-bold text-zinc-900">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-100 text-[14px] font-bold text-zinc-900">
                 {activeCount}
               </span>
             )}
@@ -102,7 +102,7 @@ export default function FilterForm({
             <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl">
               {/* Difficulty */}
               <div className="border-b border-zinc-800 p-4">
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                <p className="mb-2 text-[14px] font-semibold uppercase tracking-wider text-zinc-500">
                   Difficulty
                 </p>
                 <div className="flex gap-2">
@@ -130,7 +130,7 @@ export default function FilterForm({
 
               {/* Categories */}
               <div className="p-4">
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                <p className="mb-2 text-[14px] font-semibold uppercase tracking-wider text-zinc-500">
                   Category
                 </p>
                 <div className="max-h-52 overflow-y-auto pr-1">
@@ -185,7 +185,7 @@ export default function FilterForm({
       {(selectedCats.length > 0 || difficulty) && (
         <div className="flex flex-wrap gap-1.5">
           {difficulty && (
-            <span className="flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-[11px] text-zinc-300">
+            <span className="flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-[14px] text-zinc-300">
               {difficulty}
               <button
                 onClick={() => { setDifficulty(''); apply(); }}
@@ -196,7 +196,7 @@ export default function FilterForm({
           {selectedCats.map((c) => (
             <span
               key={c}
-              className="flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-[11px] text-zinc-300"
+              className="flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-[14px] text-zinc-300"
             >
               {c}
               <button

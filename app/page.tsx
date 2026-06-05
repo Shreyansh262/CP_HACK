@@ -132,7 +132,7 @@ export default async function HomePage({
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-5 py-6">
+    <div className="mx-auto w-full max-w-6xl px-5 py-6">
 
       {/* ── Signed-in dashboard banner ── */}
       {user && (
