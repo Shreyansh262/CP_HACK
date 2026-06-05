@@ -7,6 +7,8 @@ import type { Problem } from '@/lib/types';
 import ProblemStatement from '@/components/ProblemStatement';
 import TutorChat from '@/components/TutorChat';
 import SimilarProblems from '@/components/SimilarProblems';
+import Stopwatch from '@/components/Stopwatch';
+// TODO: Phase 6 — wire back when execution provider is decided.
 // import RunPanel from '@/components/RunPanel';
 
 // Monaco is client-only and heavy — dynamic import, SSR off.
@@ -178,10 +180,12 @@ export default function ProblemView({
     };
   }, []);
 
-  // Reset code on language switch.
-  useEffect(() => {
-    setCode(STARTER[language] ?? '');
-  }, [language]);
+  // Switch language and reset to that language's starter in one action, so we
+  // don't drive code state from an effect.
+  const switchLanguage = (lang: 'cpp' | 'python') => {
+    setLanguage(lang);
+    setCode(STARTER[lang] ?? '');
+  };
 
   // Debounced parse: 350ms after last keystroke.
   useEffect(() => {
@@ -266,7 +270,7 @@ export default function ProblemView({
         <div className="flex shrink-0 items-center gap-2 border-b border-zinc-800 px-2 py-1.5">
           <select
             value={language}
-            onChange={(e) => setLanguage(e.target.value as 'cpp' | 'python')}
+            onChange={(e) => switchLanguage(e.target.value as 'cpp' | 'python')}
             suppressHydrationWarning
             className="rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-300 focus:outline-none"
           >
@@ -279,6 +283,10 @@ export default function ProblemView({
               {diagnostics.length} issue{diagnostics.length !== 1 ? 's' : ''}
             </span>
           )}
+
+          <div className="ml-3">
+            <Stopwatch />
+          </div>
 
           {/* Phase 4: Mark Solved button */}
           {user && (

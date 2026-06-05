@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser, isUuid } from '@/lib/progress';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
 
 export async function POST(req: NextRequest) {
-  // requireUser returns { userId, db } OR { error } — check before destructuring
+  // requireUser returns { userId, db } OR { error } — check before destructuring.
+  // db is the user's JWT-scoped client, so RLS authorizes the write.
   const authResult = await requireUser();
   if ('error' in authResult) return authResult.error;
-  const { userId } = authResult;
+  const { userId, db: supabase } = authResult;
 
   const body = await req.json() as { problemId?: string; problem_id?: string; source?: string };
   const problemId = body.problemId ?? body.problem_id;
@@ -40,15 +35,20 @@ export async function POST(req: NextRequest) {
 
   // 2. Update existing row if it exists; otherwise insert a new solved row.
   //    This avoids depending on a specific composite unique constraint shape.
-  const payload = isUnseen
-    ? { user_id: userId, unseen_problem_id: problemId, status: 'solved', solved_at: now, updated_at: now }
-    : { user_id: userId, problem_id: problemId, status: 'solved', solved_at: now, updated_at: now };
+  const payload: Record<string, string> = {
+    user_id: userId,
+    [conflictCol]: problemId,
+    status: 'solved',
+    solved_at: now,
+    updated_at: now,
+  };
 
-  const existingFilter = isUnseen
-    ? supabase.from('user_progress').update(payload).eq('user_id', userId).eq('unseen_problem_id', problemId)
-    : supabase.from('user_progress').update(payload).eq('user_id', userId).eq('problem_id', problemId);
-
-  const { data: updatedRows, error: updateError } = await existingFilter.select('id');
+  const { data: updatedRows, error: updateError } = await supabase
+    .from('user_progress')
+    .update(payload)
+    .eq('user_id', userId)
+    .eq(conflictCol, problemId)
+    .select('id');
 
   if (updateError) {
     console.error('[mark-solved:update]', updateError);

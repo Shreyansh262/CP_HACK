@@ -1,6 +1,8 @@
-//  NO USE NOW 
-
-
+// DEFERRED — Phase 6. The Run-on-samples feature is intentionally on hold.
+// The Piston public API became auth-gated in Feb 2026 and won't issue keys to
+// portfolio projects, so there is no execution provider wired up yet. This
+// handler is kept (not deleted) so it can be revived once a provider is chosen.
+// TODO: Phase 6 — wire back when execution provider is decided.
 
 // import { NextRequest, NextResponse } from 'next/server';
 
@@ -183,3 +185,7 @@
 //   const allPassed = results.length > 0 && results.every((r) => r.passed);
 //   return NextResponse.json({ results, allPassed });
 // }
+
+// Empty export keeps this a valid (handler-less) module while the route is
+// deferred — without it the Next type validator treats the file as a non-module.
+export {};

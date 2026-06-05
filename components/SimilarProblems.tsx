@@ -49,7 +49,7 @@ export default function SimilarProblems({ problemId, source = 'seeded' }: Props)
   if (problems.length === 0) {
     return (
       <p className="text-xs text-zinc-500">
-        No similar problems found yet — embeddings may still be generating.
+        No similar problems found for this one yet.
       </p>
     );
   }

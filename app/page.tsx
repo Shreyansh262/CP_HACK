@@ -1,11 +1,22 @@
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
 import { createSupabaseServer, getAuthUser } from '@/lib/supabase-server';
 import { computeStreaks, type ProblemAttempt } from '@/lib/scoring';
 import type { ProblemListItem } from '@/lib/types';
 import FilterForm from '@/components/FilterForm';
 import UnseenProblemInput from '@/components/UnseenProblemInput';
+import {
+  CATEGORIES,
+  ALL_MAPPED_TAGS,
+  OTHER_CATEGORY,
+  tagsForCategory,
+} from '@/lib/topic-categories';
 export const dynamic = 'force-dynamic';
+
+/** PostgREST array literal with every element double-quoted (safe for tags
+ *  with spaces/hyphens like "two pointers", "2-sat"). */
+function pgArray(tags: string[]): string {
+  return `{${tags.map((t) => `"${t.replace(/"/g, '\\"')}"`).join(',')}}`;
+}
 
 const PAGE_SIZE = 50;
 
@@ -19,6 +30,9 @@ type ProgressStatus = {
   problem_id: string;
   status: 'attempted' | 'solved' | 'given_up';
   solved_at: string | null;
+  hints_used: number;
+  tier1_calls: number;
+  tier2_calls: number;
 };
 
 export default async function HomePage({
@@ -26,46 +40,58 @@ export default async function HomePage({
 }: {
   searchParams: Promise<{
     q?: string;
-    tag?: string;
+    cat?: string;
     difficulty?: string;
     page?: string;
   }>;
 }) {
-  const { q, tag, difficulty, page: pageStr } = await searchParams;
+  const { q, cat, difficulty, page: pageStr } = await searchParams;
   const page = Math.max(1, parseInt(pageStr ?? '1', 10) || 1);
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
+  // User-scoped reads go through the SSR (anon-key) client so RLS applies.
+  const db = await createSupabaseServer();
   const user = await getAuthUser();
 
   // ── Problem list query ─────────────────────────────────────────────────────
-  let query = supabase
+  let query = db
     .from('competitive_problems')
     .select('id, external_id, title, difficulty, tags', { count: 'exact' })
     .order('external_id', { ascending: true })
     .range(from, to);
 
   if (q) query = query.ilike('title', `%${q}%`);
-  const selectedTags = tag ? tag.split(',').filter(Boolean) : [];
-  if (selectedTags.length)
-    query = (query as any).overlaps('tags', selectedTags);
+
+  // Category filter. Mapped categories expand to their CF tags (overlaps).
+  // "Other" = no tag maps to any category (not-overlaps the full mapped set).
+  // Both selected → OR of the two conditions, all server-side so pagination +
+  // count stay correct.
+  const selectedCats = cat ? cat.split(',').filter(Boolean) : [];
+  if (selectedCats.length) {
+    const mapped = selectedCats.filter((c) => c !== OTHER_CATEGORY);
+    const wantOther = selectedCats.includes(OTHER_CATEGORY);
+    const conds: string[] = [];
+    const unionTags = [...new Set(mapped.flatMap(tagsForCategory))];
+    if (unionTags.length) conds.push(`tags.ov.${pgArray(unionTags)}`);
+    if (wantOther) conds.push(`tags.not.ov.${pgArray(ALL_MAPPED_TAGS)}`);
+    if (conds.length) query = query.or(conds.join(','));
+  }
+
   if (difficulty && DIFFICULTY_RANGES[difficulty]) {
     const [min, max] = DIFFICULTY_RANGES[difficulty];
-    query = query.gte('difficulty', String(min)).lte('difficulty', String(max));
+    query = query.gte('difficulty', min).lte('difficulty', max);
   }
 
   // ── Run problem + progress queries in parallel ─────────────────────────────
-  const [problemsResult, progressResult, tagsResult] = await Promise.all([
+  const [problemsResult, progressResult] = await Promise.all([
     query,
     user
-      ? createSupabaseServer().then((db) =>
-          db
-            .from('user_progress')
-            .select('problem_id, status, solved_at')
-            .eq('user_id', user.id)
-        )
+      ? db
+          .from('user_progress')
+          .select('problem_id, status, solved_at, hints_used, tier1_calls, tier2_calls')
+          .eq('user_id', user.id)
       : Promise.resolve({ data: null, error: null }),
-    supabase.from('competitive_problems').select('tags'),
   ]);
 
   const problems = (problemsResult.data ?? []) as ProblemListItem[];
@@ -78,10 +104,6 @@ export default async function HomePage({
     statusByProblem[r.problem_id] = r.status;
   }
 
-  const allTags = [
-    ...new Set((tagsResult.data ?? []).flatMap((r) => r.tags ?? [])),
-  ].sort() as string[];
-
   // ── Dashboard stats for signed-in users ───────────────────────────────────
   let currentStreak = 0;
   let totalSolved = 0;
@@ -90,9 +112,9 @@ export default async function HomePage({
     totalSolved = progressRows.filter((r) => r.status === 'solved').length;
     const attempts: ProblemAttempt[] = progressRows.map((r) => ({
       difficulty_rating: null,
-      hints_used: 0,
-      tier1_calls: 0,
-      tier2_calls: 0,
+      hints_used: r.hints_used,
+      tier1_calls: r.tier1_calls,
+      tier2_calls: r.tier2_calls,
       status: r.status,
       solved_at: r.solved_at,
     }));
@@ -103,7 +125,7 @@ export default async function HomePage({
   function pageUrl(p: number) {
     const params = new URLSearchParams();
     if (q) params.set('q', q);
-    if (tag) params.set('tag', tag);
+    if (cat) params.set('cat', cat);
     if (difficulty) params.set('difficulty', difficulty);
     params.set('page', String(p));
     return `/?${params.toString()}`;
@@ -122,7 +144,7 @@ export default async function HomePage({
             <span className="text-xs text-zinc-500">Problems solved</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-2xl font-bold tabular-nums text-zinc-100">
+            <span className="text-2xl font-bold tabular-nums text-orange-400">
               {currentStreak}
             </span>
             <span className="text-xs text-zinc-500">Day streak 🔥</span>
@@ -141,9 +163,12 @@ export default async function HomePage({
       {/* ── Filter ── */}
       <div className="mb-4">
         <FilterForm
-          allTags={allTags}
+          // Remount when the URL filter changes (incl. browser back/forward) so
+          // the form's local state can't drift from the rendered results.
+          key={`${q ?? ''}|${cat ?? ''}|${difficulty ?? ''}`}
+          categories={CATEGORIES}
           defaultQ={q ?? ''}
-          defaultTags={tag ? tag.split(',').filter(Boolean) : []}
+          defaultCats={selectedCats}
           defaultDifficulty={difficulty ?? ''}
         />
       </div>

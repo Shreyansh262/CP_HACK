@@ -23,35 +23,44 @@ export interface ProblemAttempt {
   solved_at: string | null;
 }
 
-// ---------- Multipliers ----------
+// ---------- Tunable constants (the ONE place to edit the formula) ----------
 
-export function hintMultiplier(hintsUsed: number): number {
-  if (hintsUsed <= 0) return 1.0;
-  if (hintsUsed === 1) return 0.75;
-  if (hintsUsed === 2) return 0.5;
-  return 0.3; // 3+
-}
+/** Rating that maps to a full base contribution of 1.0. Set below the CF top
+ *  (~3500) so mid/hard solves earn a healthy base — leniency knob. */
+const MAX_RATING = 3250;
+/** Rating used when a problem has no difficulty recorded. */
+const DEFAULT_RATING = 1100;
+/** Each revealed hint shaves this fraction off a full problem. */
+const HINT_PENALTY = 0.04;
+/** Each Quick Review (Tier 1) call penalty. */
+const T1_PENALTY = 0.015;
+/** Each Deep Analysis (Tier 2) call penalty — costs more than Quick. */
+const T2_PENALTY = 0.05;
+/** Scales one problem's net contribution into "points". ~10–11 clean medium
+ *  solves approach the cap. */
+const POINTS_PER_PROBLEM = 16;
+/** Overall score is clamped to [FLOOR, SCORE_CAP]. */
+const SCORE_CAP = 100;
+const FLOOR = 0;
 
-export function aiMultiplier(tier1: number, tier2: number): number {
-  if (tier2 === 0 && tier1 <= 2) return 1.0;
-  if (tier2 <= 1 || tier1 <= 5) return 0.85;
-  return 0.7;
-}
-
-// ---------- Per-problem score ----------
+// ---------- Per-problem points ----------
 
 /**
- * Score for one solved problem. Returns 0 for non-solved attempts so callers
- * can safely sum across mixed arrays.
+ * Net points for one solved problem. Returns 0 for non-solved attempts so
+ * callers can sum across mixed arrays. CAN be negative: heavy hint + AI use on
+ * an easy problem makes the penalties exceed the base, so a sloppy solve drags
+ * the 30-day total down rather than merely adding little.
  */
 export function problemScore(attempt: ProblemAttempt): number {
   if (attempt.status !== 'solved') return 0;
-  const rating = attempt.difficulty_rating ?? 1000;
-  return (
-    rating *
-    hintMultiplier(attempt.hints_used) *
-    aiMultiplier(attempt.tier1_calls, attempt.tier2_calls)
-  );
+  const rating = attempt.difficulty_rating ?? DEFAULT_RATING;
+
+  const base = rating / MAX_RATING; // 0..1, rewards harder problems
+  const hintPen = HINT_PENALTY * attempt.hints_used;
+  const aiPen = T1_PENALTY * attempt.tier1_calls + T2_PENALTY * attempt.tier2_calls;
+
+  const rawContribution = base - hintPen - aiPen; // may be negative
+  return rawContribution * POINTS_PER_PROBLEM;
 }
 
 // ---------- Aggregate score ----------
@@ -59,7 +68,9 @@ export function problemScore(attempt: ProblemAttempt): number {
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
- * Sum of problem_score for solved attempts in the last 30 days.
+ * Normalized 0..100 score: sum of per-problem points for solves in the last 30
+ * days, clamped to [FLOOR, SCORE_CAP]. Bounded (not an unbounded sum) and can
+ * go down across the window when problems are solved with heavy assistance.
  * `now` is injectable for testing; defaults to wall clock.
  */
 export function overallScore(
@@ -74,7 +85,7 @@ export function overallScore(
     if (Number.isNaN(t) || t < cutoff) continue;
     total += problemScore(a);
   }
-  return Math.round(total);
+  return Math.round(Math.max(FLOOR, Math.min(SCORE_CAP, total)));
 }
 
 // ---------- Streaks ----------
@@ -208,9 +219,12 @@ export function topicStrength(
       rate: attempted > 0 ? solved / attempted : null,
     }))
     .sort((a, b) => {
-      // Weakest first, but require ≥3 attempts to count as a meaningful weakness.
-      const aWeak = (a.rate ?? 1) * (a.attempted >= 3 ? 1 : 2);
-      const bWeak = (b.rate ?? 1) * (b.attempted >= 3 ? 1 : 2);
-      return aWeak - bWeak;
+      // Weakest first by Laplace-smoothed rate (solved+1)/(attempted+2). The
+      // old `rate * (attempted<3 ? 2 : 1)` hack did nothing at rate 0, so a
+      // single 0/1 attempt ranked as the weakest topic. Smoothing pulls
+      // low-sample tags toward neutral (0.5) so they don't dominate.
+      const aSmooth = (a.solved + 1) / (a.attempted + 2);
+      const bSmooth = (b.solved + 1) / (b.attempted + 2);
+      return aSmooth - bSmooth;
     });
 }

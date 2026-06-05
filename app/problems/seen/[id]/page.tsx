@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { getAuthUser } from '@/lib/supabase-server';
+import Link from 'next/link';
+import { createSupabaseServer, getAuthUser } from '@/lib/supabase-server';
 import ProblemView from './ProblemView';
 import type { Hint } from '@/lib/types';
 
@@ -8,9 +8,10 @@ type Props = { params: Promise<{ id: string }> };
 
 export default async function ProblemPage({ params }: Props) {
   const { id } = await params;
+  const db = await createSupabaseServer();
 
   const [problemResult, user] = await Promise.all([
-    supabase
+    db
       .from('competitive_problems')
       .select('id, source, external_id, title, problem_statement, difficulty, tags, hints, edge_cases, sample_io, created_at')
       .eq('id', id)
@@ -50,6 +51,3 @@ export default async function ProblemPage({ params }: Props) {
     </div>
   );
 }
-
-// Need Link import
-import Link from 'next/link';

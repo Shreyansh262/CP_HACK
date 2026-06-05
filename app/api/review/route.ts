@@ -5,6 +5,7 @@ import { Redis } from '@upstash/redis';
 import { getAuthUser } from '@/lib/supabase-server';
 import { supabase as supabaseAdmin } from '@/lib/supabase';
 import { resolveTier, incrementT1, incrementT2 } from '@/lib/quota';
+import { geminiApiKey, redisEnv } from '@/lib/env';
 import {
   buildSystemPrompt,
   trimHistory,
@@ -31,10 +32,7 @@ const CACHE_TTL_SEC = 60 * 60 * 24; // 24 h
 
 // ─── Redis (Phase 4 response cache) ──────────────────────────────────────────
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-});
+const redis = new Redis(redisEnv());
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -159,7 +157,7 @@ export async function POST(request: NextRequest) {
   const userMessage =
     `${intent}\n\nMy current ${language} code:\n\`\`\`${language}\n${code}\n\`\`\``;
 
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+  const genAI = new GoogleGenerativeAI(geminiApiKey());
   const model = genAI.getGenerativeModel({
     model: MODELS[eTier],
     systemInstruction: systemPrompt,
@@ -233,18 +231,19 @@ export async function POST(request: NextRequest) {
         controller.close();
       } catch (err) {
         console.error('[review] Gemini error:', err);
-        controller.enqueue(
-          sse({
-            type: 'error',
-            content:
-              'AI is temporarily unavailable. Stored hints are still here for you.',
-            chips: ['Reveal Hint 1', 'Reveal Hint 2', 'Reveal Hint 3'],
-            activeTier: eTier,
-            downgradeReason: null,
-            t1Remaining: quotaState.t1Remaining,
-            t2Remaining: quotaState.t2Remaining,
-          }),
-        );
+        const errorPayload = {
+          content:
+            'AI is temporarily unavailable. Stored hints are still here for you.',
+          chips: ['Reveal Hint 1', 'Reveal Hint 2', 'Reveal Hint 3'],
+          activeTier: eTier,
+          downgradeReason: null,
+          t1Remaining: quotaState.t1Remaining,
+          t2Remaining: quotaState.t2Remaining,
+        };
+        controller.enqueue(sse({ type: 'error', ...errorPayload }));
+        // Always follow with a terminal 'done' so the client leaves its
+        // "thinking…" state even when no tokens streamed (#11).
+        controller.enqueue(sse({ type: 'done', ...errorPayload }));
         controller.close();
       }
     },

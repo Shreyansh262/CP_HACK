@@ -51,14 +51,14 @@ export default function AIUsageToday({
   return (
     <div className="space-y-4 rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
       <UsageBar
-        label="⚡ Quick Review"
+        label="Quick Review"
         used={TIER1_DAILY - t1Remaining}
         total={TIER1_DAILY}
         remaining={t1Remaining}
         color="blue"
       />
       <UsageBar
-        label="🔬 Deep Analysis"
+        label="Deep Analysis"
         used={TIER2_DAILY - t2Remaining}
         total={TIER2_DAILY}
         remaining={t2Remaining}

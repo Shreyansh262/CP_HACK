@@ -52,6 +52,7 @@ export default function AuthButton({ user }: { user: User | null }) {
         <button
           onClick={signOut}
           disabled={loading}
+          suppressHydrationWarning
           className="rounded border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-50"
         >
           Sign out
@@ -79,17 +80,20 @@ export default function AuthButton({ user }: { user: User | null }) {
           onChange={(e) => setEmail(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && signInWithEmail()}
           placeholder="you@example.com"
+          suppressHydrationWarning
           className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-100 placeholder-zinc-600 focus:border-zinc-500 focus:outline-none"
         />
         <button
           onClick={signInWithEmail}
           disabled={loading || !email.trim()}
+          suppressHydrationWarning
           className="rounded bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-900 hover:bg-white disabled:opacity-50"
         >
           {loading ? '…' : 'Send link'}
         </button>
         <button
           onClick={() => setEmailMode(false)}
+          suppressHydrationWarning
           className="text-xs text-zinc-500 hover:text-zinc-300"
         >
           ✕
@@ -103,6 +107,7 @@ export default function AuthButton({ user }: { user: User | null }) {
       <button
         onClick={signInWithGoogle}
         disabled={loading}
+        suppressHydrationWarning
         className="flex items-center gap-1.5 rounded border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-50"
       >
         <GoogleIcon />
@@ -110,6 +115,7 @@ export default function AuthButton({ user }: { user: User | null }) {
       </button>
       <button
         onClick={() => setEmailMode(true)}
+        suppressHydrationWarning
         className="text-xs text-zinc-500 hover:text-zinc-300"
       >
         Email

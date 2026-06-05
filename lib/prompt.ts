@@ -134,7 +134,7 @@ RESPONSE FORMAT:
 `;
 }
 
-function hintLabel(level: number): string {
+export function hintLabel(level: number): string {
   if (level === 1) return 'nudge';
   if (level === 2) return 'approach';
   return 'key insight';
@@ -172,7 +172,11 @@ export function postProcessResponse(raw: string): {
   // 3. Strip code blocks (multi-line fences)
   text = text.replace(/```[\s\S]*?```/g, '*(code block removed by tutor policy)*');
 
-  // 4. Strip any remaining fence-looking starts (incomplete blocks at end of stream)
+  // 4. Strip any remaining fence-looking starts (incomplete blocks at end of stream).
+  // KNOWN EDGE CASE (#13): this trailing-fence sweep can also eat legitimate text
+  // after a stray ``` near the end of a stream. Left as-is intentionally — tightening
+  // it tends to let real code blocks leak through, which is the worse failure. Don't
+  // "simplify" this without weighing both directions.
   text = text.replace(/```[\s\S]*$/, '').trim();
 
   return { text, chips };

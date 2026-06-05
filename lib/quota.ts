@@ -1,4 +1,5 @@
 import { Redis } from '@upstash/redis';
+import { redisEnv } from '@/lib/env';
 
 // ─── Configurable allocation constants ───────────────────────────────────────
 // Adjust these without touching the logic.
@@ -14,10 +15,7 @@ export const TIER1_GLOBAL_CAP = 480;
 
 // ─── Redis client ─────────────────────────────────────────────────────────────
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-});
+const redis = new Redis(redisEnv());
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

@@ -2,12 +2,18 @@ import { createSupabaseServer } from '@/lib/supabase-server';
 import {
   overallScore,
   computeStreaks,
-  topicStrength,
   dayKey,
   type ProblemAttempt,
-  type TopicStat,
 } from '@/lib/scoring';
+import { categoriesForTags, OTHER_CATEGORY } from '@/lib/topic-categories';
 import { getQuotaState } from '@/lib/quota';
+
+/** Solved/attempted counts for one canonical topic category. */
+export type CategoryStat = {
+  category: string;
+  solved: number;
+  attempted: number;
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,7 +50,7 @@ export type ProfileData = {
   rows: ProgressRow[];
   score: number;
   streaks: { current: number; longest: number };
-  topicStats: TopicStat[];
+  topicStats: CategoryStat[];
   difficultyBuckets: DifficultyBucket[];
   solvedByDay: Record<string, number>; // YYYY-MM-DD -> solve count
   recentRows: ProgressRow[];
@@ -110,22 +116,32 @@ export async function fetchProfileData(
     solved_at: r.solved_at,
   }));
 
-  const tagsByProblemId: Record<string, string[]> = {};
-  for (const row of rows) {
-    if (row.competitive_problems?.tags) {
-      tagsByProblemId[row.problem_id] = [
-        ...new Set(row.competitive_problems.tags.filter(Boolean)),
-      ];
-    }
-  }
-
   // ── Derived data ─────────────────────────────────────────────────────────
   const score = overallScore(attempts);
   const streaks = computeStreaks(attempts, timeZone);
-  const topicStats = topicStrength(
-    rows.map((r) => ({ problem_id: r.problem_id, status: r.status })),
-    tagsByProblemId,
-  );
+
+  // Aggregate by canonical category. A problem counts toward every category it
+  // maps to, so totals across categories can exceed the raw problem count.
+  const catAcc = new Map<string, { attempted: number; solved: number }>();
+  for (const row of rows) {
+    const tags =
+      row.competitive_problems?.tags ?? row.unseen_problems?.tags ?? [];
+    for (const category of categoriesForTags(tags)) {
+      const cur = catAcc.get(category) ?? { attempted: 0, solved: 0 };
+      cur.attempted += 1;
+      if (row.status === 'solved') cur.solved += 1;
+      catAcc.set(category, cur);
+    }
+  }
+  const topicStats: CategoryStat[] = [...catAcc.entries()]
+    .map(([category, { attempted, solved }]) => ({ category, attempted, solved }))
+    .filter((c) => c.attempted > 0)
+    .sort((a, b) => {
+      // 'Other' always last; otherwise most-solved first.
+      if (a.category === OTHER_CATEGORY) return 1;
+      if (b.category === OTHER_CATEGORY) return -1;
+      return b.solved - a.solved;
+    });
 
   const solvedRows = rows.filter((r) => r.status === 'solved');
 

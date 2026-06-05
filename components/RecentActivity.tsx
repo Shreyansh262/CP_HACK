@@ -23,6 +23,9 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function fmtTime(secs: number): string {
+  // Heartbeat time can legitimately be 0 (e.g. solved without the tab focused
+  // long enough). Show N/A rather than a misleading "0s".
+  if (!secs) return 'N/A';
   if (secs < 60) return `${secs}s`;
   const m = Math.floor(secs / 60);
   const s = secs % 60;
@@ -76,7 +79,11 @@ export default function RecentActivity({ rows }: { rows: ProgressRow[] }) {
                   </span>
                 )}
                 {(row.tier1_calls > 0 || row.tier2_calls > 0) && (
-                  <span>AI ⚡{row.tier1_calls} 🔬{row.tier2_calls}</span>
+                  <span>
+                    AI <span className="text-blue-400">{row.tier1_calls} quick</span>
+                    {' · '}
+                    <span className="text-violet-400">{row.tier2_calls} deep</span>
+                  </span>
                 )}
                 <span>{fmtDate(row.updated_at)}</span>
               </div>

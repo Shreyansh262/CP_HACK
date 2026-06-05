@@ -1,5 +1,7 @@
 'use client';
-//Reduntant component, not used anywhere, but keeping for now in case we want to add a "Run on samples" button in the future that opens this as a panel instead of inline results
+// DEFERRED — Phase 6. Not mounted anywhere yet; kept for when an execution
+// provider is chosen (see app/api/execute/route.ts).
+// TODO: Phase 6 — wire back when execution provider is decided.
 import { useState } from 'react';
 
 interface SampleCase {
@@ -177,7 +179,7 @@ export default function RunPanel({ code, language, samples, onAllPassed }: Props
 
       {/* Note */}
       <p className="text-[10px] text-zinc-600">
-        Runs against sample cases only · Execution sandboxed via Judge0
+        Runs against sample cases only
       </p>
     </div>
   );

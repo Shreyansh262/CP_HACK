@@ -71,7 +71,7 @@ export default async function ProfilePage() {
 
       {/* ── Topics + Difficulty side by side ── */}
       <div className="grid gap-8 md:grid-cols-2">
-        <Section title="Topics — weakest first">
+        <Section title="Topics solved">
           <TopicStrength stats={data.topicStats} />
         </Section>
 
@@ -96,8 +96,9 @@ export default async function ProfilePage() {
 
       {/* ── Footer note ── */}
       <p className="text-xs text-zinc-600">
-        Score = sum of (difficulty × hint multiplier × AI multiplier) for problems
-        solved in the last 30 days.{' '}
+        Score (0–100) rewards harder solves and subtracts for hints and AI use,
+        summed over problems solved in the last 30 days. Leaning heavily on hints
+        and AI can lower it.{' '}
         <Link href="/" className="text-zinc-500 hover:text-zinc-400 underline">
           ← Back to problems
         </Link>

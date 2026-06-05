@@ -1,84 +1,75 @@
 'use client';
 
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Cell,
-  ResponsiveContainer,
-} from 'recharts';
-import type { TopicStat } from '@/lib/scoring';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import type { CategoryStat } from '@/lib/profile-queries';
+import { OTHER_CATEGORY } from '@/lib/topic-categories';
 
-export default function TopicStrength({ stats }: { stats: TopicStat[] }) {
-  // Show up to 10 topics, weakest first (already sorted by topicStrength()).
-  const data = stats.slice(0, 10).map((s) => ({
-    tag: s.tag.length > 14 ? s.tag.slice(0, 13) + '…' : s.tag,
-    rate: s.rate !== null ? Math.round(s.rate * 100) : 0,
-    attempted: s.attempted,
-    solved: s.solved,
-  }));
+// Distinct accent palette; 'Other' is forced to a muted grey to de-emphasise it.
+const COLORS = [
+  '#6366f1', '#22c55e', '#eab308', '#06b6d4', '#ec4899',
+  '#f97316', '#8b5cf6', '#14b8a6', '#3b82f6', '#a3e635', '#f43f5e',
+];
+const OTHER_COLOR = '#52525b';
+
+type Slice = { name: string; value: number };
+
+function PieTooltip({ active, payload }: {
+  active?: boolean;
+  payload?: { name: string; value: number }[];
+}) {
+  if (!active || !payload?.length) return null;
+  const p = payload[0];
+  return (
+    <div style={{ background: '#18181b', border: '1px solid #3f3f46', fontSize: 11, borderRadius: 6, padding: '4px 8px', color: '#e4e4e7' }}>
+      {p.name} — {p.value} solved
+    </div>
+  );
+}
+
+export default function TopicStrength({ stats }: { stats: CategoryStat[] }) {
+  // Only categories the user has actually solved something in (a pie of zero
+  // slices is meaningless).
+  const data: Slice[] = stats
+    .filter((s) => s.solved > 0)
+    .map((s) => ({ name: s.category, value: s.solved }));
 
   if (data.length === 0) {
     return (
       <p className="text-sm text-zinc-500">
-        Attempt more problems to see topic analysis.
+        Solve some problems to see your topic breakdown.
       </p>
     );
   }
 
+  // Show the category name on the slice only when it's wide enough (~5%);
+  // thin slices omit the label rather than overlap.
+  const renderLabel = ({ name, percent }: { name?: string; percent?: number }) =>
+    (percent ?? 0) >= 0.05 ? name ?? '' : '';
+
   return (
-    <ResponsiveContainer width="100%" height={Math.max(160, data.length * 24)}>
-      <BarChart
-        data={data}
-        layout="vertical"
-        margin={{ left: 8, right: 32, top: 4, bottom: 4 }}
-      >
-        <XAxis
-          type="number"
-          domain={[0, 100]}
-          tickFormatter={(v) => `${v}%`}
-          tick={{ fill: '#71717a', fontSize: 10 }}
-          axisLine={false}
-          tickLine={false}
-        />
-        <YAxis
-          type="category"
-          dataKey="tag"
-          width={90}
-          tick={{ fill: '#a1a1aa', fontSize: 11 }}
-          axisLine={false}
-          tickLine={false}
-        />
-        <Tooltip
-          cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-          formatter={(v: any, _: unknown, props: { payload?: { attempted: number; solved: number } }) => [
-            `${v}% (${props.payload?.solved ?? 0}/${props.payload?.attempted ?? 0})`,
-            'Solve rate',
-          ]}
-          contentStyle={{
-            background: '#18181b',
-            border: '1px solid #3f3f46',
-            fontSize: 11,
-            borderRadius: 6,
-          }}
-        />
-        <Bar dataKey="rate" radius={[0, 3, 3, 0]} maxBarSize={14}>
-          {data.map((entry, i) => (
+    <ResponsiveContainer width="100%" height={260}>
+      <PieChart>
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="name"
+          cx="50%"
+          cy="50%"
+          outerRadius={95}
+          label={renderLabel}
+          labelLine={false}
+          stroke="#18181b"
+          isAnimationActive={false}
+        >
+          {data.map((d, i) => (
             <Cell
-              key={i}
-              fill={
-                entry.rate >= 70
-                  ? '#22c55e'
-                  : entry.rate >= 40
-                  ? '#eab308'
-                  : '#ef4444'
-              }
+              key={d.name}
+              fill={d.name === OTHER_CATEGORY ? OTHER_COLOR : COLORS[i % COLORS.length]}
             />
           ))}
-        </Bar>
-      </BarChart>
+        </Pie>
+        <Tooltip content={<PieTooltip />} />
+      </PieChart>
     </ResponsiveContainer>
   );
 }

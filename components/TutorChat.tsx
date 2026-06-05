@@ -7,8 +7,9 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import type { User } from '@supabase/supabase-js';
-import type { Problem, Hint } from '@/lib/types';
+import type { Problem } from '@/lib/types';
 import { getSupabaseBrowser } from '@/lib/supabase-browser';
+import { hintLabel } from '@/lib/prompt';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,31 +40,30 @@ function makeId(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-function hintLabel(level: number): string {
-  if (level === 1) return 'gentle nudge';
-  if (level === 2) return 'bigger hint';
-  return 'substantial hint';
-}
-
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function QuotaBadge({
-  emoji,
   label,
   remaining,
   exhausted,
+  tone,
 }: {
-  emoji: string;
   label: string;
   remaining: number | null;
   exhausted: boolean;
+  tone: 'quick' | 'deep';
 }) {
+  // A leading dot + tinted text distinguishes the tiers without emoji.
+  const dot = tone === 'deep' ? 'bg-violet-400' : 'bg-blue-400';
+  const text = exhausted
+    ? 'text-zinc-600'
+    : tone === 'deep'
+      ? 'text-violet-300'
+      : 'text-blue-300';
   return (
-    <span
-      className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium ${exhausted ? 'bg-zinc-800 text-zinc-600' : 'bg-zinc-800 text-zinc-300'
-        }`}
-    >
-      {emoji} {label} {remaining !== null ? `(${remaining})` : '—'}
+    <span className={`flex items-center gap-1.5 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium ${text}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${exhausted ? 'bg-zinc-600' : dot}`} />
+      {label} {remaining !== null ? `(${remaining})` : '—'}
     </span>
   );
 }
@@ -126,9 +126,11 @@ function ChatMessage({
               suppressHydrationWarning
               className={`rounded border px-2.5 py-1 text-xs font-medium transition-colors ${chip.startsWith('Reveal Hint')
                   ? 'border-amber-800 bg-amber-950/40 text-amber-400 hover:border-amber-600 hover:text-amber-300'
-                  : chip === 'Review my code' || chip === 'Deep analysis'
-                    ? 'border-indigo-800 bg-indigo-950/40 text-indigo-400 hover:border-indigo-600 hover:text-indigo-300'
-                    : 'border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+                  : chip === 'Review my code'
+                    ? 'border-blue-800 bg-blue-950/40 text-blue-300 hover:border-blue-600 hover:text-blue-200'
+                    : chip === 'Deep analysis'
+                      ? 'border-violet-800 bg-violet-950/40 text-violet-300 hover:border-violet-600 hover:text-violet-200'
+                      : 'border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
                 }`}            >
               {chip}
             </button>
@@ -169,7 +171,7 @@ export default function TutorChat({
   user: User | null;
 }) {
   const initialChips = user
-    ? ['Review my code ⚡', 'Deep analysis 🔬', 'Reveal Hint 1']
+    ? ['Review my code', 'Deep analysis', 'Reveal Hint 1']
     : ['Reveal Hint 1'];
 
   const [messages, setMessages] = useState<Message[]>([
@@ -187,6 +189,16 @@ export default function TutorChat({
   const [isLoading, setIsLoading] = useState(false);
   const [inputText, setInputText] = useState('');
   const [downgradeNote, setDowngradeNote] = useState<string | null>(null);
+  // Tier for free-typed messages, chosen via the selector by the Send box.
+  const [selectedTier, setSelectedTier] = useState<'quick' | 'deep'>('quick');
+
+  // Deep is unavailable once the user's T2 quota (or global backstop, surfaced
+  // as t2Remaining = 0) is spent. Derive the effective tier rather than storing
+  // it — we never send 'deep' when it would silently downgrade, and the user's
+  // choice is restored automatically if quota frees up.
+  const deepAvailable = quota ? quota.t2Remaining > 0 : true;
+  const effectiveTier: 'quick' | 'deep' =
+    selectedTier === 'deep' && !deepAvailable ? 'quick' : selectedTier;
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef(messages);
@@ -307,19 +319,22 @@ export default function TutorChat({
               const eTier = event.activeTier as string;
 
               if (firstToken) {
-                // Cache hit or zero-AI: no tokens arrived, push the full message now.
+                // Cache hit, zero-AI, or error: no tokens arrived. Upsert by
+                // placeholderId so a trailing error→done pair can't double-push.
                 setIsLoading(false);
-                setMessages((prev) => [
-                  ...prev,
-                  {
-                    id: placeholderId,
-                    role: 'assistant',
-                    content,
-                    source:
-                      eTier === 'deep' ? 'ai-t2' : eTier === 'quick' ? 'ai-t1' : 'system',
-                    chips,
-                  },
-                ]);
+                const finalMsg: Message = {
+                  id: placeholderId,
+                  role: 'assistant',
+                  content,
+                  source:
+                    eTier === 'deep' ? 'ai-t2' : eTier === 'quick' ? 'ai-t1' : 'system',
+                  chips,
+                };
+                setMessages((prev) =>
+                  prev.some((m) => m.id === placeholderId)
+                    ? prev.map((m) => (m.id === placeholderId ? finalMsg : m))
+                    : [...prev, finalMsg],
+                );
               } else {
                 // Finalise the streaming placeholder.
                 setMessages((prev) =>
@@ -415,7 +430,7 @@ export default function TutorChat({
     push({
       role: 'assistant',
       source: 'stored',
-      content: `**Hint ${idx + 1}:** ${hint.text}`,
+      content: `**Hint ${idx + 1} (${hintLabel(idx + 1)}):** ${hint.text}`,
       chips: [...nextChips, ...aiChips],
     });
 
@@ -461,17 +476,16 @@ export default function TutorChat({
           content:
             "Great! Let me know when you want feedback on your next attempt.",
           source: 'system',
-          chips: ['Review my code ⚡', 'Deep analysis 🔬'],
+          chips: ['Review my code', 'Deep analysis'],
         });
         return;
       }
 
-      const tier =
-        chip.includes('Deep') || chip.includes('🔬') ? 'deep' : 'quick';
+      const tier = chip.includes('Deep') ? 'deep' : 'quick';
       const intent =
-        chip === 'Review my code ⚡'
+        chip === 'Review my code'
           ? 'Please review my current code and give me one targeted piece of feedback.'
-          : chip === 'Deep analysis 🔬'
+          : chip === 'Deep analysis'
             ? 'Please deeply analyse my code: approach, time complexity, and any subtle edge cases.'
             : chip;
 
@@ -498,7 +512,7 @@ export default function TutorChat({
       return;
     }
 
-    await callReview('quick', text, text);
+    await callReview(effectiveTier, text, text);
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -510,13 +524,13 @@ export default function TutorChat({
       {user && (
         <div className="flex shrink-0 items-center gap-2 border-b border-zinc-800 px-3 py-2">
           <QuotaBadge
-            emoji="🔬"
+            tone="deep"
             label="Deep"
             remaining={quota?.t2Remaining ?? null}
             exhausted={quota?.t2Remaining === 0}
           />
           <QuotaBadge
-            emoji="⚡"
+            tone="quick"
             label="Quick"
             remaining={quota?.t1Remaining ?? null}
             exhausted={quota?.t1Remaining === 0}
@@ -576,33 +590,48 @@ export default function TutorChat({
                 callReview(
                   'quick',
                   'Please review my current code and give me one targeted piece of feedback.',
-                  'Review my code ⚡',
+                  'Review my code',
                 )
               }
               disabled={isLoading || quota?.t1Remaining === 0}
               suppressHydrationWarning
-              className="flex-1 rounded border border-zinc-700 px-2 py-1.5 text-[11px] text-zinc-300 hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex-1 rounded border border-blue-900 px-2 py-1.5 text-[11px] text-blue-300 hover:border-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              ⚡ Review{quota ? ` (${quota.t1Remaining})` : ''}
+              Review{quota ? ` (${quota.t1Remaining})` : ''}
             </button>
             <button
               onClick={() =>
                 callReview(
                   'deep',
                   'Please deeply analyse my code: approach, time complexity, edge cases, and paradigm fit.',
-                  'Deep analysis 🔬',
+                  'Deep analysis',
                 )
               }
               disabled={isLoading || quota?.t2Remaining === 0}
               suppressHydrationWarning
-              className="flex-1 rounded border border-purple-900 px-2 py-1.5 text-[11px] text-purple-300 hover:border-purple-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex-1 rounded border border-violet-900 px-2 py-1.5 text-[11px] text-violet-300 hover:border-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              🔬 Deep{quota ? ` (${quota.t2Remaining})` : ''}
+              Deep{quota ? ` (${quota.t2Remaining})` : ''}
             </button>
           </div>
 
           {/* Free-form input */}
           <div className="flex gap-1.5">
+            {/* Per-message model selector — routes the typed message to the
+                chosen tier. Deep disables when its quota is spent. */}
+            <select
+              value={effectiveTier}
+              onChange={(e) => setSelectedTier(e.target.value as 'quick' | 'deep')}
+              disabled={isLoading}
+              suppressHydrationWarning
+              title="Model for your typed message"
+              className="rounded border border-zinc-700 bg-zinc-900 px-1.5 py-1.5 text-xs text-zinc-300 focus:outline-none focus:ring-1 focus:ring-zinc-600 disabled:opacity-40"
+            >
+              <option value="quick">Quick</option>
+              <option value="deep" disabled={!deepAvailable}>
+                Deep{deepAvailable ? '' : ' (0)'}
+              </option>
+            </select>
             <input
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}

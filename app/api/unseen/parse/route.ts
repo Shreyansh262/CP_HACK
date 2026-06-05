@@ -3,8 +3,11 @@ import * as cheerio from 'cheerio';
 import crypto from 'crypto';
 import { GoogleGenerativeAI, TaskType } from '@google/generative-ai';
 import { supabase } from '@/lib/supabase';
+import { requireUser } from '@/lib/progress';
+import { resolveTier, incrementT1 } from '@/lib/quota';
+import { geminiApiKey } from '@/lib/env';
 
-const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const genai = new GoogleGenerativeAI(geminiApiKey());
 
 // ── URL validation ─────────────────────────────────────────────────────────────
 
@@ -201,14 +204,32 @@ async function embedProblem(problem: ParsedProblem): Promise<number[] | null> {
     // L2 normalise
     const norm = Math.sqrt(vec.reduce((s, v) => s + v * v, 0));
     return norm > 0 ? vec.map((v) => v / norm) : vec;
-  } catch {
-    return null; // non-fatal — problem is still usable without embedding
+  } catch (e) {
+    // Non-fatal — problem is still usable without an embedding, but log so the
+    // failure is visible (#12). Such rows get no similar-problem results.
+    console.error('[unseen/parse] embedding failed for', problem.title, e);
+    return null;
   }
 }
 
 // ── Route handler ──────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  // Auth + quota gate BEFORE any Codeforces fetch / Gemini / embed call (#4).
+  // Parsing a new problem burns a Flash-Lite hint call plus an embed call, so
+  // it draws from the same Tier 1 daily budget as /api/review.
+  const authResult = await requireUser();
+  if ('error' in authResult) return authResult.error;
+  const { userId } = authResult;
+
+  const { effectiveTier } = await resolveTier(userId, 'quick');
+  if (effectiveTier === 'zero') {
+    return NextResponse.json(
+      { error: 'Daily AI quota reached. Try again tomorrow.' },
+      { status: 429 },
+    );
+  }
+
   const { url } = await req.json() as { url?: string };
 
   if (!url?.trim()) {
@@ -292,8 +313,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ problem: full, cached: true });
   }
 
-  // 6. Generate hints (live Flash-Lite call)
+  // 6. Generate hints (live Flash-Lite call). This is the point we actually
+  //    spend AI budget — cache/dedup hits above returned without touching it —
+  //    so count it against the user's Tier 1 quota here.
   const hints = await generateHints(parsed);
+  await incrementT1(userId);
 
   // 7. Embed (non-blocking if it fails)
   const embedding = await embedProblem(parsed);

@@ -10,20 +10,20 @@ const DIFFICULTY_BUCKETS = [
 ];
 
 export default function FilterForm({
-  allTags,
+  categories,
   defaultQ,
-  defaultTags,
+  defaultCats,
   defaultDifficulty,
 }: {
-  allTags: string[];
+  categories: string[];
   defaultQ: string;
-  defaultTags: string[];
+  defaultCats: string[];
   defaultDifficulty: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState(defaultQ);
-  const [selectedTags, setSelectedTags] = useState<string[]>(defaultTags);
+  const [selectedCats, setSelectedCats] = useState<string[]>(defaultCats);
   const [difficulty, setDifficulty] = useState(defaultDifficulty); // 'Easy'|'Medium'|'Hard'|''
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -38,16 +38,16 @@ export default function FilterForm({
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  function toggleTag(t: string) {
-    setSelectedTags((prev) =>
-      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
+  function toggleCat(c: string) {
+    setSelectedCats((prev) =>
+      prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]
     );
   }
 
   function apply() {
     const params = new URLSearchParams();
     if (q.trim()) params.set('q', q.trim());
-    if (selectedTags.length) params.set('tags', selectedTags.join(','));
+    if (selectedCats.length) params.set('cat', selectedCats.join(','));
     if (difficulty) params.set('difficulty', difficulty);
     const qs = params.toString();
     router.push(qs ? `/?${qs}` : '/');
@@ -56,13 +56,13 @@ export default function FilterForm({
 
   function clearAll() {
     setQ('');
-    setSelectedTags([]);
+    setSelectedCats([]);
     setDifficulty('');
     router.push('/');
     setOpen(false);
   }
 
-  const activeCount = selectedTags.length + (difficulty ? 1 : 0);
+  const activeCount = selectedCats.length + (difficulty ? 1 : 0);
 
   return (
     <div className="mb-6 space-y-2">
@@ -128,25 +128,25 @@ export default function FilterForm({
                 </div>
               </div>
 
-              {/* Tags */}
+              {/* Categories */}
               <div className="p-4">
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                  Tags
+                  Category
                 </p>
                 <div className="max-h-52 overflow-y-auto pr-1">
                   <div className="grid grid-cols-2 gap-1">
-                    {allTags.map((t) => (
+                    {categories.map((c) => (
                       <label
-                        key={t}
+                        key={c}
                         className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800"
                       >
                         <input
                           type="checkbox"
-                          checked={selectedTags.includes(t)}
-                          onChange={() => toggleTag(t)}
+                          checked={selectedCats.includes(c)}
+                          onChange={() => toggleCat(c)}
                           className="h-3.5 w-3.5 rounded border-zinc-600 bg-zinc-800 accent-zinc-100"
                         />
-                        {t}
+                        {c}
                       </label>
                     ))}
                   </div>
@@ -182,7 +182,7 @@ export default function FilterForm({
       </div>
 
       {/* Active filter chips */}
-      {(selectedTags.length > 0 || difficulty) && (
+      {(selectedCats.length > 0 || difficulty) && (
         <div className="flex flex-wrap gap-1.5">
           {difficulty && (
             <span className="flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-[11px] text-zinc-300">
@@ -193,14 +193,14 @@ export default function FilterForm({
               >×</button>
             </span>
           )}
-          {selectedTags.map((t) => (
+          {selectedCats.map((c) => (
             <span
-              key={t}
+              key={c}
               className="flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-[11px] text-zinc-300"
             >
-              {t}
+              {c}
               <button
-                onClick={() => { toggleTag(t); apply(); }}
+                onClick={() => { toggleCat(c); apply(); }}
                 className="ml-0.5 text-zinc-500 hover:text-zinc-200"
               >×</button>
             </span>

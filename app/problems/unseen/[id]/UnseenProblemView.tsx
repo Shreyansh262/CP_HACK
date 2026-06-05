@@ -6,6 +6,8 @@ import { User } from '@supabase/supabase-js';
 import type { Problem } from '@/lib/types';
 import ProblemStatement from '@/components/ProblemStatement';
 import TutorChat from '@/components/TutorChat';
+import Stopwatch from '@/components/Stopwatch';
+// TODO: Phase 6 — wire back when execution provider is decided.
 // import RunPanel from '@/components/RunPanel';
 import SimilarProblems from '@/components/SimilarProblems';
 
@@ -141,7 +143,6 @@ export default function UnseenProblemView({ problem, user }: Props) {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {/* FIX: ProblemStatement takes `markdown` prop, not `statement` + `tags` */}
           <div className="p-4">
             <ProblemStatement markdown={problem.problem_statement} />
           </div>
@@ -156,11 +157,11 @@ export default function UnseenProblemView({ problem, user }: Props) {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <p className="mb-0.5 text-[10px] text-zinc-600">Input</p>
-                      <pre className="overflow-x-auto whitespace-pre-wrap rounded bg-zinc-800 p-2 text-xs text-zinc-200">{s.input}</pre>
+                      <pre className="overflow-x-auto whitespace-pre rounded bg-zinc-800 p-2 text-xs text-zinc-200">{s.input}</pre>
                     </div>
                     <div>
                       <p className="mb-0.5 text-[10px] text-zinc-600">Output</p>
-                      <pre className="overflow-x-auto whitespace-pre-wrap rounded bg-zinc-800 p-2 text-xs text-zinc-200">{s.output}</pre>
+                      <pre className="overflow-x-auto whitespace-pre rounded bg-zinc-800 p-2 text-xs text-zinc-200">{s.output}</pre>
                     </div>
                   </div>
                 </div>
@@ -168,103 +169,78 @@ export default function UnseenProblemView({ problem, user }: Props) {
             </div>
           )}
 
-          {/* Tabs: Run / Similar */}
+          {/* Similar problems. The Run-on-samples tab is deferred. */}
+          {/* TODO: Phase 6 — wire back when execution provider is decided. */}
           <div className="border-t border-zinc-800 px-4 pt-3 pb-4">
             <p className="mb-2 text-xs font-medium text-zinc-400">Similar problems</p>
             <SimilarProblems problemId={problem.id} source="unseen" />
           </div>
-          {/* <div className="border-t border-zinc-800 px-4 pt-3 pb-1">
-            <div className="mb-3 flex gap-2">
-              {(['run', 'similar'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`rounded px-2.5 py-1 text-xs transition-colors ${
-                    activeTab === tab
-                      ? 'bg-zinc-700 text-zinc-100'
-                      : 'text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
-                  {tab === 'run' ? '▶ Run' : '≈ Similar'}
-                </button>
-              ))}
-            </div> */}
+        </div>
+      </div>
 
-          {/* {activeTab === 'run' && (
-              <RunPanel
-                code={code}
-                language={language}
-                samples={samples}
-                onAllPassed={user ? markSolved : undefined}
-              />
-            )}
+      {/* ── Drag handle: left ── */}
+      <div
+        className="w-1 shrink-0 cursor-col-resize bg-zinc-800 hover:bg-blue-500 active:bg-blue-400 transition-colors"
+        onMouseDown={(e) => startDrag(e, 'left')}
+      />
 
-            {activeTab === 'similar' && (
-              <SimilarProblems problemId={problem.id} source="unseen" />
-            )} */}
-        {/* </div> */}
+      {/* ── Middle: Editor ── */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex shrink-0 items-center gap-2 border-b border-zinc-800 px-3 py-2">
+          <div className="flex overflow-hidden rounded-md border border-zinc-700 text-sm">
+            <button
+              onClick={() => switchLanguage('cpp')}
+              className={`px-3 py-1 ${language === 'cpp' ? 'bg-zinc-700 text-zinc-100' : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200'}`}
+            >
+              C++17
+            </button>
+            <button
+              onClick={() => switchLanguage('python')}
+              className={`border-l border-zinc-700 px-3 py-1 ${language === 'python' ? 'bg-zinc-700 text-zinc-100' : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200'}`}
+            >
+              Python 3
+            </button>
+          </div>
+
+          <div className="ml-3">
+            <Stopwatch />
+          </div>
+
+          {user && (
+            <button
+              onClick={markSolved}
+              disabled={solved}
+              suppressHydrationWarning
+              className={`ml-auto rounded border px-3 py-1 text-sm font-medium transition-colors ${solved
+                  ? 'cursor-default border-green-800 bg-green-900/30 text-green-500'
+                  : 'border-zinc-700 text-zinc-400 hover:border-green-700 hover:text-green-400'
+                }`}
+            >
+              {solved ? '✓ Solved' : 'Mark solved'}
+            </button>
+          )}
+        </div>
+
+        <div className="min-h-0 flex-1">
+          <CodeEditor value={code} language={language} onChange={(v) => setCode(v ?? '')} />
+        </div>
+      </div>
+
+      {/* ── Drag handle: right ── */}
+      <div
+        className="w-1 shrink-0 cursor-col-resize bg-zinc-800 hover:bg-blue-500 active:bg-blue-400 transition-colors"
+        onMouseDown={(e) => startDrag(e, 'right')}
+      />
+
+      {/* ── Right: Tutor chat ── */}
+      <div className="flex shrink-0 flex-col" style={{ width: `${rightPct}%` }}>
+        <TutorChat
+          problem={toTutorProblem(problem)}
+          code={code}
+          language={language}
+          user={user}
+        />
       </div>
     </div>
-
-      {/* ── Drag handle: left ── */ }
-  <div
-    className="w-1 shrink-0 cursor-col-resize bg-zinc-800 hover:bg-blue-500 active:bg-blue-400 transition-colors"
-    onMouseDown={(e) => startDrag(e, 'left')}
-  />
-
-  {/* ── Middle: Editor ── */ }
-  <div className="flex min-w-0 flex-1 flex-col">
-    <div className="flex shrink-0 items-center gap-2 border-b border-zinc-800 px-3 py-2">
-      <div className="flex overflow-hidden rounded-md border border-zinc-700 text-sm">
-        <button
-          onClick={() => switchLanguage('cpp')}
-          className={`px-3 py-1 ${language === 'cpp' ? 'bg-zinc-700 text-zinc-100' : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200'}`}
-        >
-          C++17
-        </button>
-        <button
-          onClick={() => switchLanguage('python')}
-          className={`border-l border-zinc-700 px-3 py-1 ${language === 'python' ? 'bg-zinc-700 text-zinc-100' : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200'}`}
-        >
-          Python 3
-        </button>
-      </div>
-      {user && (
-        <button
-          onClick={markSolved}
-          disabled={solved}
-          suppressHydrationWarning
-          className={`ml-auto rounded border px-3 py-1 text-sm font-medium transition-colors ${solved
-              ? 'cursor-default border-green-800 bg-green-900/30 text-green-500'
-              : 'border-zinc-700 text-zinc-400 hover:border-green-700 hover:text-green-400'
-            }`}
-        >
-          {solved ? '✓ Solved' : 'Mark solved'}
-        </button>
-      )}
-    </div>
-
-    <div className="min-h-0 flex-1">
-      <CodeEditor value={code} language={language} onChange={(v) => setCode(v ?? '')} />
-    </div>
-  </div>
-
-  {/* ── Drag handle: right ── */ }
-  <div
-    className="w-1 shrink-0 cursor-col-resize bg-zinc-800 hover:bg-blue-500 active:bg-blue-400 transition-colors"
-    onMouseDown={(e) => startDrag(e, 'right')}
-  />
-
-  {/* ── Right: Tutor chat ── */ }
-  <div className="flex shrink-0 flex-col" style={{ width: `${rightPct}%` }}>
-    <TutorChat
-      problem={toTutorProblem(problem)}
-      code={code}
-      language={language}
-      user={user}
-    />
-  </div>
-
-    </div >
   );
 }
