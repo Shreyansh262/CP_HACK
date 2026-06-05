@@ -25,8 +25,8 @@ const MODELS = {
   deep: 'gemini-3.5-flash',
 } as const;
 
-const THINKING_BUDGET = { quick: 512, deep: 8192 } as const;
-const MAX_OUTPUT_TOKENS = { quick: 1500, deep: 3000 } as const;
+const THINKING_BUDGET = { quick: 512, deep: 7936 } as const;
+const MAX_OUTPUT_TOKENS = { quick: 1500, deep: 3500 } as const;
 const CACHE_TTL_SEC = 60 * 60 * 24; // 24 h
 
 // ─── Redis (Phase 4 response cache) ──────────────────────────────────────────

@@ -12,9 +12,7 @@ export default async function ProblemPage({ params }: Props) {
   const [problemResult, user] = await Promise.all([
     supabase
       .from('competitive_problems')
-      .select(
-        'id, title, problem_statement, difficulty, tags, hints, edge_cases, external_id, source, created_at',
-      )
+      .select('id, source, external_id, title, problem_statement, difficulty, tags, hints, edge_cases, sample_io, created_at')
       .eq('id', id)
       .single(),
     getAuthUser(),

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-
 /**
  * GET /api/similar?id=<uuid>&source=seeded|unseen
  *
@@ -33,15 +32,14 @@ export async function GET(req: NextRequest) {
   }
 
   // 2. Parse difficulty for range filter
-  const diffNum = ref.difficulty ? parseInt(ref.difficulty, 10) : null;
+  const diffNum  = ref.difficulty ? parseInt(ref.difficulty, 10) : null;
   const diffLow  = diffNum ? diffNum - 300 : null;
   const diffHigh = diffNum ? diffNum + 300 : null;
 
-  // 3. Vector search via pgvector — use match_problems RPC (defined below)
-  // We call raw SQL via rpc to do the cosine similarity search efficiently.
+  // 3. Vector search via pgvector RPC
   const { data: similar, error: simErr } = await supabase.rpc('match_problems', {
     query_embedding: ref.embedding,
-    match_count:     10,          // fetch 10, then filter down
+    match_count:     10,
     exclude_id:      id,
   });
 
@@ -50,8 +48,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Similarity search failed' }, { status: 500 });
   }
 
-  // 4. Filter by difficulty range and tag overlap
-  const primaryTag = ref.tags?.[0];
+  // 4. Pick primary tag — skip CF meta-tags like *special
+  const primaryTag = (ref.tags ?? []).find((t: string) => !t.startsWith('*'));
+
+  // 5. Filter by difficulty range and tag overlap
   const filtered = (similar ?? [])
     .filter((row: { difficulty?: string; tags?: string[]; similarity: number }) => {
       if (diffLow && diffHigh) {

@@ -6,7 +6,7 @@ import { User } from '@supabase/supabase-js';
 import type { Problem } from '@/lib/types';
 import ProblemStatement from '@/components/ProblemStatement';
 import TutorChat from '@/components/TutorChat';
-import RunPanel from '@/components/RunPanel';
+// import RunPanel from '@/components/RunPanel';
 import SimilarProblems from '@/components/SimilarProblems';
 
 const CodeEditor = dynamic(() => import('@/components/CodeEditor'), { ssr: false });
@@ -37,16 +37,16 @@ interface Props {
 // Adapter: shape UnseenProblem into the Problem type TutorChat expects
 function toTutorProblem(p: UnseenProblem): Problem {
   return {
-    id:                p.id,
-    source:            'unseen',
-    external_id:       null,
-    title:             p.title,
+    id: p.id,
+    source: 'unseen',
+    external_id: null,
+    title: p.title,
     problem_statement: p.problem_statement,
-    difficulty:        p.difficulty,
-    tags:              p.tags ?? [],
-    hints:             (p.hints ?? []).map(h => ({ level: h.level as 1 | 2 | 3, text: h.text })),
-    edge_cases:        [] as string[],
-    created_at:        new Date().toISOString(),   // ← add this line
+    difficulty: p.difficulty,
+    tags: p.tags ?? [],
+    hints: (p.hints ?? []).map(h => ({ level: h.level as 1 | 2 | 3, text: h.text })),
+    edge_cases: [] as string[],
+    created_at: new Date().toISOString(),   // ← add this line
   };
 }
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -74,12 +74,11 @@ main()`;
 
 export default function UnseenProblemView({ problem, user }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [leftPct, setLeftPct]     = useState(30);
-  const [rightPct, setRightPct]   = useState(28);
-  const [language, setLanguage]   = useState<'cpp' | 'python'>('cpp');
-  const [code, setCode]           = useState(DEFAULT_CPP);
-  const [solved, setSolved]       = useState(false);
-  const [activeTab, setActiveTab] = useState<'run' | 'similar'>('run');
+  const [leftPct, setLeftPct] = useState(30);
+  const [rightPct, setRightPct] = useState(28);
+  const [language, setLanguage] = useState<'cpp' | 'python'>('cpp');
+  const [code, setCode] = useState(DEFAULT_CPP);
+  const [solved, setSolved] = useState(false);
   const dragRef = useRef<{ side: 'left' | 'right'; startX: number; startPct: number } | null>(null);
 
   // ── Mark solved ─────────────────────────────────────────────────────────────
@@ -90,7 +89,7 @@ export default function UnseenProblemView({ problem, user }: Props) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ problemId: problem.id, source: 'unseen' }),
-    }).catch(() => {});
+    }).catch(() => { });
   }, [solved, user, problem.id]);
 
   // ── Language switch ─────────────────────────────────────────────────────────
@@ -170,7 +169,11 @@ export default function UnseenProblemView({ problem, user }: Props) {
           )}
 
           {/* Tabs: Run / Similar */}
-          <div className="border-t border-zinc-800 px-4 pt-3 pb-1">
+          <div className="border-t border-zinc-800 px-4 pt-3 pb-4">
+            <p className="mb-2 text-xs font-medium text-zinc-400">Similar problems</p>
+            <SimilarProblems problemId={problem.id} source="unseen" />
+          </div>
+          {/* <div className="border-t border-zinc-800 px-4 pt-3 pb-1">
             <div className="mb-3 flex gap-2">
               {(['run', 'similar'] as const).map((tab) => (
                 <button
@@ -185,9 +188,9 @@ export default function UnseenProblemView({ problem, user }: Props) {
                   {tab === 'run' ? '▶ Run' : '≈ Similar'}
                 </button>
               ))}
-            </div>
+            </div> */}
 
-            {activeTab === 'run' && (
+          {/* {activeTab === 'run' && (
               <RunPanel
                 code={code}
                 language={language}
@@ -198,71 +201,70 @@ export default function UnseenProblemView({ problem, user }: Props) {
 
             {activeTab === 'similar' && (
               <SimilarProblems problemId={problem.id} source="unseen" />
-            )}
-          </div>
-        </div>
+            )} */}
+        {/* </div> */}
       </div>
-
-      {/* ── Drag handle: left ── */}
-      <div
-        className="w-1 shrink-0 cursor-col-resize bg-zinc-800 hover:bg-blue-500 active:bg-blue-400 transition-colors"
-        onMouseDown={(e) => startDrag(e, 'left')}
-      />
-
-      {/* ── Middle: Editor ── */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex shrink-0 items-center gap-2 border-b border-zinc-800 px-3 py-2">
-          <div className="flex overflow-hidden rounded-md border border-zinc-700 text-sm">
-            <button
-              onClick={() => switchLanguage('cpp')}
-              className={`px-3 py-1 ${language === 'cpp' ? 'bg-zinc-700 text-zinc-100' : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200'}`}
-            >
-              C++17
-            </button>
-            <button
-              onClick={() => switchLanguage('python')}
-              className={`border-l border-zinc-700 px-3 py-1 ${language === 'python' ? 'bg-zinc-700 text-zinc-100' : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200'}`}
-            >
-              Python 3
-            </button>
-          </div>
-          {user && (
-            <button
-              onClick={markSolved}
-              disabled={solved}
-              suppressHydrationWarning
-              className={`ml-auto rounded border px-3 py-1 text-sm font-medium transition-colors ${
-                solved
-                  ? 'cursor-default border-green-800 bg-green-900/30 text-green-500'
-                  : 'border-zinc-700 text-zinc-400 hover:border-green-700 hover:text-green-400'
-              }`}
-            >
-              {solved ? '✓ Solved' : 'Mark solved'}
-            </button>
-          )}
-        </div>
-
-        <div className="min-h-0 flex-1">
-          <CodeEditor value={code} language={language} onChange={(v) => setCode(v ?? '')} />
-        </div>
-      </div>
-
-      {/* ── Drag handle: right ── */}
-      <div
-        className="w-1 shrink-0 cursor-col-resize bg-zinc-800 hover:bg-blue-500 active:bg-blue-400 transition-colors"
-        onMouseDown={(e) => startDrag(e, 'right')}
-      />
-
-      {/* ── Right: Tutor chat ── */}
-      <div className="flex shrink-0 flex-col" style={{ width: `${rightPct}%` }}>
-        <TutorChat
-          problem={toTutorProblem(problem)}
-          code={code}
-          language={language}
-          user={user}
-        />
-      </div>
-
     </div>
+
+      {/* ── Drag handle: left ── */ }
+  <div
+    className="w-1 shrink-0 cursor-col-resize bg-zinc-800 hover:bg-blue-500 active:bg-blue-400 transition-colors"
+    onMouseDown={(e) => startDrag(e, 'left')}
+  />
+
+  {/* ── Middle: Editor ── */ }
+  <div className="flex min-w-0 flex-1 flex-col">
+    <div className="flex shrink-0 items-center gap-2 border-b border-zinc-800 px-3 py-2">
+      <div className="flex overflow-hidden rounded-md border border-zinc-700 text-sm">
+        <button
+          onClick={() => switchLanguage('cpp')}
+          className={`px-3 py-1 ${language === 'cpp' ? 'bg-zinc-700 text-zinc-100' : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200'}`}
+        >
+          C++17
+        </button>
+        <button
+          onClick={() => switchLanguage('python')}
+          className={`border-l border-zinc-700 px-3 py-1 ${language === 'python' ? 'bg-zinc-700 text-zinc-100' : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200'}`}
+        >
+          Python 3
+        </button>
+      </div>
+      {user && (
+        <button
+          onClick={markSolved}
+          disabled={solved}
+          suppressHydrationWarning
+          className={`ml-auto rounded border px-3 py-1 text-sm font-medium transition-colors ${solved
+              ? 'cursor-default border-green-800 bg-green-900/30 text-green-500'
+              : 'border-zinc-700 text-zinc-400 hover:border-green-700 hover:text-green-400'
+            }`}
+        >
+          {solved ? '✓ Solved' : 'Mark solved'}
+        </button>
+      )}
+    </div>
+
+    <div className="min-h-0 flex-1">
+      <CodeEditor value={code} language={language} onChange={(v) => setCode(v ?? '')} />
+    </div>
+  </div>
+
+  {/* ── Drag handle: right ── */ }
+  <div
+    className="w-1 shrink-0 cursor-col-resize bg-zinc-800 hover:bg-blue-500 active:bg-blue-400 transition-colors"
+    onMouseDown={(e) => startDrag(e, 'right')}
+  />
+
+  {/* ── Right: Tutor chat ── */ }
+  <div className="flex shrink-0 flex-col" style={{ width: `${rightPct}%` }}>
+    <TutorChat
+      problem={toTutorProblem(problem)}
+      code={code}
+      language={language}
+      user={user}
+    />
+  </div>
+
+    </div >
   );
 }

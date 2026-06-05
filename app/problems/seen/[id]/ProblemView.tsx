@@ -7,7 +7,7 @@ import type { Problem } from '@/lib/types';
 import ProblemStatement from '@/components/ProblemStatement';
 import TutorChat from '@/components/TutorChat';
 import SimilarProblems from '@/components/SimilarProblems';
-import RunPanel from '@/components/RunPanel';
+// import RunPanel from '@/components/RunPanel';
 
 // Monaco is client-only and heavy — dynamic import, SSR off.
 type CodeEditorProps = {
@@ -210,10 +210,11 @@ export default function ProblemView({
   // ── Mark solved handler ────────────────────────────────────────────────────
   const handleMarkSolved = () => {
     if (!user) return;
+    console.log('mark-solved payload:', { problemId: problem.id, source: 'seeded' });
     fetch('/api/progress/mark-solved', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ problem_id: problem.id }),
+      body: JSON.stringify({ problemId: problem.id, source: 'seeded' }),
     })
       .then(() => setMarkedSolved(true))
       .catch(() => { });
@@ -232,13 +233,22 @@ export default function ProblemView({
         </div>
         {samples.length > 0 && (
           <div className="border-t border-zinc-800 px-4 pt-3 pb-4">
-            <p className="mb-1 text-xs font-medium text-zinc-400">Run on samples</p>
-            <RunPanel
-              code={code}
-              language={language}
-              samples={samples}
-              onAllPassed={user ? handleMarkSolved : undefined}
-            />
+            <p className="mb-2 text-xs font-medium text-zinc-400">Sample Cases</p>
+            {samples.map((s, i) => (
+              <div key={i} className="mb-3">
+                <p className="mb-1 text-[10px] text-zinc-500">Case {i + 1}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="mb-0.5 text-[10px] text-zinc-600">Input</p>
+                    <pre className="overflow-x-auto whitespace-pre rounded bg-zinc-800 p-2 text-xs leading-relaxed text-zinc-200">{s.input}</pre>
+                  </div>
+                  <div>
+                    <p className="mb-0.5 text-[10px] text-zinc-600">Output</p>
+                    <pre className="overflow-x-auto whitespace-pre rounded bg-zinc-800 p-2 text-xs leading-relaxed text-zinc-200">{s.output}</pre>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
         <div className="border-t border-zinc-800 px-4 pt-3 pb-4">

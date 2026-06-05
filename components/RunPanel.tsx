@@ -1,5 +1,5 @@
 'use client';
-
+//Reduntant component, not used anywhere, but keeping for now in case we want to add a "Run on samples" button in the future that opens this as a panel instead of inline results
 import { useState } from 'react';
 
 interface SampleCase {

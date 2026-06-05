@@ -22,8 +22,8 @@ function validateCfUrl(raw: string): { ok: true; canonical: string } | { ok: fal
 
   const p = url.pathname;
   const problemsetMatch = p.match(/^\/problemset\/problem\/(\d+)\/([A-Z]\d*)$/i);
-  const contestMatch    = p.match(/^\/contest\/(\d+)\/problem\/([A-Z]\d*)$/i);
-  const gymMatch        = p.match(/^\/gym\/(\d+)\/problem\/([A-Z]\d*)$/i);
+  const contestMatch = p.match(/^\/contest\/(\d+)\/problem\/([A-Z]\d*)$/i);
+  const gymMatch = p.match(/^\/gym\/(\d+)\/problem\/([A-Z]\d*)$/i);
 
   if (!problemsetMatch && !contestMatch && !gymMatch) {
     return {
@@ -63,8 +63,12 @@ function parseCfHtml(html: string): ParsedProblem | { error: string } {
     statementClone.find('.sample-tests').remove();
     statementClone.find('.note').remove();
 
-    const problemStatement = statementClone.text()
-      .replace(/\s+/g, ' ')
+    const problemStatement = statementClone.children()
+      .toArray()
+      .map((el) => $(el).text().replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+      .join('\n\n')
+      .replace(/∗/g, '*')
       .trim()
       .slice(0, 8000);
 
@@ -74,13 +78,40 @@ function parseCfHtml(html: string): ParsedProblem | { error: string } {
       .join('\n') || '';
 
     const sampleIo: { input: string; output: string }[] = [];
-    statementDiv.find('.sample-tests').first().find('.input, .output').each((i, el) => {
-      const text = ($(el).find('pre').text() || $(el).text()).trim();
-      if (i % 2 === 0) {
-        sampleIo.push({ input: text, output: '' });
-      } else if (sampleIo.length > 0) {
-        sampleIo[sampleIo.length - 1].output = text;
-      }
+
+    statementDiv.find('.sample-test').each((_, sampleTest) => {
+      const $st = $(sampleTest);
+
+      $st.find('.input').each((idx, inputEl) => {
+        // CF wraps each line in div.test-example-line; fall back to raw pre text.
+        const $pre = $(inputEl).find('pre');
+        let inputText: string;
+
+        const lines = $pre.find('.test-example-line');
+        if (lines.length > 0) {
+          inputText = lines.map((_, ln) => $(ln).text()).get().join('\n');
+        } else {
+          // Older format: <br>-separated. Convert <br> to \n before reading text.
+          $pre.find('br').replaceWith('\n');
+          inputText = $pre.text();
+        }
+
+        // Matching output block at the same index
+        const $outPre = $st.find('.output').eq(idx).find('pre');
+        $outPre.find('br').replaceWith('\n');
+        let outputText: string;
+        const outLines = $outPre.find('.test-example-line');
+        if (outLines.length > 0) {
+          outputText = outLines.map((_, ln) => $(ln).text()).get().join('\n');
+        } else {
+          outputText = $outPre.text();
+        }
+
+        sampleIo.push({
+          input: inputText.replace(/\r/g, '').trimEnd(),
+          output: outputText.replace(/\r/g, '').trimEnd(),
+        });
+      });
     });
 
     const tags = $('.tag-box')
@@ -269,14 +300,14 @@ export async function POST(req: NextRequest) {
 
   // 8. Insert
   const insertPayload = {
-    source_url:        canonical,
-    statement_hash:    statementHash,
-    title:             parsed.title,
+    source_url: canonical,
+    statement_hash: statementHash,
+    title: parsed.title,
     problem_statement: parsed.problemStatement,
-    constraints_text:  parsed.constraintsText || null,
-    sample_io:         parsed.sampleIo.length ? parsed.sampleIo : null,
-    difficulty:        parsed.difficulty,
-    tags:              parsed.tags,
+    constraints_text: parsed.constraintsText || null,
+    sample_io: parsed.sampleIo.length ? parsed.sampleIo : null,
+    difficulty: parsed.difficulty,
+    tags: parsed.tags,
     hints,
     embedding,
   };

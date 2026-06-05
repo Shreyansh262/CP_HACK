@@ -71,11 +71,12 @@ export function buildSystemPrompt(problem: Problem, tier: 'quick' | 'deep' = 'qu
 
   const responseStyle =
     tier === 'deep'
-      ? `HARD LIMIT: 250 to 300 words maximum (not counting the chips tag).
+      ? `Target: 250 to 300 words maximum (not counting the chips tag).
      You may use markdown headers (##) to organise sections. Up to 4 sections.
-     Still ONE primary nudge — elaborate on complexity, edge cases, paradigm fit in sub-sections.
+     Still ONE primary nudge — elaborate on complexity, edge cases, paradigm fit in sub-sections.Always complete your response.
+     Never stop mid-sentence or mid-word.
      End with the <chips> tag.`
-      : `HARD LIMIT: 80 to 100 words maximum for your entire response (not counting the chips tag).
+      : `Target: 80 to 100 words maximum for your entire response (not counting the chips tag).
    No headers, no numbered lists, no multi-part breakdowns.
    ONE nudge only — the single most important thing. If you want to say more, don't.
    End with the <chips> tag.`;
