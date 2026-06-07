@@ -144,7 +144,7 @@ export default async function HomePage({
             <span className="text-xs text-zinc-500">Problems solved</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-2xl font-bold tabular-nums text-orange-400">
+            <span className="text-2xl font-bold tabular-nums text-orange-600 dark:text-orange-400">
               {currentStreak}
             </span>
             <span className="text-xs text-zinc-500">Day streak 🔥</span>

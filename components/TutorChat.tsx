@@ -58,8 +58,8 @@ function QuotaBadge({
   const text = exhausted
     ? 'text-zinc-600'
     : tone === 'deep'
-      ? 'text-violet-300'
-      : 'text-blue-300';
+      ? 'text-violet-700 dark:text-violet-300'
+      : 'text-blue-700 dark:text-blue-300';
   return (
     <span className={`flex items-center gap-1.5 rounded bg-zinc-800 px-1.5 py-0.5 text-[13px] font-medium ${text}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${exhausted ? 'bg-zinc-600' : dot}`} />
@@ -125,11 +125,11 @@ function ChatMessage({
               onClick={() => onChip(chip)}
               suppressHydrationWarning
               className={`rounded border px-2.5 py-1 text-xs font-medium transition-colors ${chip.startsWith('Reveal Hint')
-                  ? 'border-amber-800 bg-amber-950/40 text-amber-400 hover:border-amber-600 hover:text-amber-300'
+                  ? 'border-amber-300 bg-amber-100 text-amber-700 hover:border-amber-400 hover:text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400 dark:hover:border-amber-600 dark:hover:text-amber-300'
                   : chip === 'Review my code'
-                    ? 'border-blue-800 bg-blue-950/40 text-blue-300 hover:border-blue-600 hover:text-blue-200'
+                    ? 'border-blue-300 bg-blue-100 text-blue-700 hover:border-blue-400 hover:text-blue-900 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:border-blue-600 dark:hover:text-blue-200'
                     : chip === 'Deep analysis'
-                      ? 'border-violet-800 bg-violet-950/40 text-violet-300 hover:border-violet-600 hover:text-violet-200'
+                      ? 'border-violet-300 bg-violet-100 text-violet-700 hover:border-violet-400 hover:text-violet-900 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:border-violet-600 dark:hover:text-violet-200'
                       : 'border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
                 }`}            >
               {chip}
@@ -536,14 +536,14 @@ export default function TutorChat({
             exhausted={quota?.t1Remaining === 0}
           />
           {quota?.activeTier === 'zero' && (
-            <span className="text-[13px] text-amber-500">All AI used today</span>
+            <span className="text-[13px] text-amber-600 dark:text-amber-500">All AI used today</span>
           )}
         </div>
       )}
 
       {/* Downgrade note */}
       {downgradeNote && (
-        <div className="shrink-0 border-b border-amber-900/30 bg-amber-950/20 px-3 py-1.5 text-[14px] text-amber-400">
+        <div className="shrink-0 border-b border-amber-900/30 bg-amber-950/20 px-3 py-1.5 text-[14px] text-amber-700 dark:text-amber-400">
           ↓ {downgradeNote}
         </div>
       )}
@@ -595,7 +595,7 @@ export default function TutorChat({
               }
               disabled={isLoading || quota?.t1Remaining === 0}
               suppressHydrationWarning
-              className="flex-1 rounded border border-blue-900 px-2 py-1.5 text-[14px] text-blue-300 hover:border-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex-1 rounded border border-blue-900 px-2 py-1.5 text-[14px] text-blue-700 dark:text-blue-300 hover:border-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Review{quota ? ` (${quota.t1Remaining})` : ''}
             </button>
@@ -609,7 +609,7 @@ export default function TutorChat({
               }
               disabled={isLoading || quota?.t2Remaining === 0}
               suppressHydrationWarning
-              className="flex-1 rounded border border-violet-900 px-2 py-1.5 text-[14px] text-violet-300 hover:border-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex-1 rounded border border-violet-900 px-2 py-1.5 text-[14px] text-violet-700 dark:text-violet-300 hover:border-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Deep{quota ? ` (${quota.t2Remaining})` : ''}
             </button>

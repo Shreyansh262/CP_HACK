@@ -115,14 +115,14 @@ export default function RunPanel({ code, language, samples, onAllPassed }: Props
 
       {/* All-pass celebration */}
       {allPassed && (
-        <div className="rounded border border-green-800 bg-green-900/20 px-3 py-2 text-sm text-green-400">
+        <div className="rounded border border-green-800 bg-green-900/20 px-3 py-2 text-sm text-green-700 dark:text-green-400">
           🎉 All sample cases passed! Problem marked as solved.
         </div>
       )}
 
       {/* Error */}
       {error && (
-        <div className="rounded border border-red-900 bg-red-950/30 px-3 py-2 text-xs text-red-400">
+        <div className="rounded border border-red-900 bg-red-950/30 px-3 py-2 text-xs text-red-700 dark:text-red-400">
           {error}
         </div>
       )}
@@ -141,7 +141,7 @@ export default function RunPanel({ code, language, samples, onAllPassed }: Props
             >
               {/* Header */}
               <div className="flex items-center justify-between">
-                <span className={`font-medium ${r.passed ? 'text-green-400' : 'text-red-400'}`}>
+                <span className={`font-medium ${r.passed ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
                   {r.passed ? '✓' : '✗'} Case {r.index}
                   <span className="ml-2 font-normal text-zinc-500">{r.status}</span>
                 </span>
@@ -157,7 +157,7 @@ export default function RunPanel({ code, language, samples, onAllPassed }: Props
                   {r.stdout != null && (
                     <div>
                       <span className="text-zinc-500">Your output: </span>
-                      <span className="font-mono text-red-300 break-all">{r.stdout || '(empty)'}</span>
+                      <span className="font-mono text-red-700 dark:text-red-300 break-all">{r.stdout || '(empty)'}</span>
                     </div>
                   )}
                   <div>
@@ -167,7 +167,7 @@ export default function RunPanel({ code, language, samples, onAllPassed }: Props
                   {r.stderr && (
                     <div>
                       <span className="text-zinc-500">Error: </span>
-                      <span className="font-mono text-yellow-400 break-all">{r.stderr.slice(0, 300)}</span>
+                      <span className="font-mono text-yellow-700 dark:text-yellow-400 break-all">{r.stderr.slice(0, 300)}</span>
                     </div>
                   )}
                 </div>

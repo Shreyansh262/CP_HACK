@@ -4,15 +4,17 @@ import { useMemo, useState } from 'react';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const CELL = 11;
+const CELL = 13; // ~20% larger than the original 11px cells
 const GAP = 2;
 const WEEKS = 53;
 
+// Colours come from CSS vars so they can flip per theme (see globals.css):
+// dark mode → more solves = brighter green; light mode → more solves = deeper green.
 function cellColor(count: number): string {
-  if (count === 0) return '#27272a';  // zinc-800
-  if (count === 1) return '#166534';  // green-800
-  if (count === 2) return '#16a34a';  // green-600
-  return '#22c55e';                   // green-500 (3+)
+  if (count === 0) return 'var(--cal-empty)';
+  if (count === 1) return 'var(--cal-1)';
+  if (count === 2) return 'var(--cal-2)';
+  return 'var(--cal-3)';
 }
 
 function dayKey(date: Date): string {
@@ -122,10 +124,14 @@ export default function StreakCalendar({
             width={CELL}
             height={CELL}
             rx={2}
-            fill={cell.isFuture ? 'transparent' : cellColor(cell.count)}
             stroke={cell.isFuture ? '#3f3f46' : 'none'}
             strokeWidth={cell.isFuture ? 1 : 0}
-            style={{ cursor: cell.isFuture ? 'default' : 'pointer' }}
+            // fill must be set via style (not the SVG attribute) so the
+            // var(--cal-*) custom properties actually resolve.
+            style={{
+              fill: cell.isFuture ? 'transparent' : cellColor(cell.count),
+              cursor: cell.isFuture ? 'default' : 'pointer',
+            }}
             onMouseEnter={(e) => {
               if (cell.isFuture) return;
               const svg = (e.target as SVGElement).closest('svg')!.getBoundingClientRect();

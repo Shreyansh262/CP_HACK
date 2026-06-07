@@ -80,7 +80,7 @@ export default function UnseenProblemInput() {
       </div>
 
       {error && (
-        <p className="mt-2 text-xs text-red-400">{error}</p>
+        <p className="mt-2 text-xs text-red-700 dark:text-red-400">{error}</p>
       )}
 
       <p className="mt-2 text-[13px] text-zinc-600">

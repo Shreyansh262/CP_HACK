@@ -115,10 +115,10 @@ export default function FilterForm({
                       className={`flex-1 rounded-md border py-1.5 text-xs font-medium transition-colors ${
                         difficulty === b.label
                           ? b.label === 'Easy'
-                            ? 'border-emerald-600 bg-emerald-900/50 text-emerald-300'
+                            ? 'border-emerald-400 bg-emerald-100 text-emerald-800 dark:border-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-300'
                             : b.label === 'Medium'
-                            ? 'border-amber-600 bg-amber-900/50 text-amber-300'
-                            : 'border-red-600 bg-red-900/50 text-red-300'
+                            ? 'border-amber-400 bg-amber-100 text-amber-800 dark:border-amber-600 dark:bg-amber-900/50 dark:text-amber-300'
+                            : 'border-red-400 bg-red-100 text-red-800 dark:border-red-600 dark:bg-red-900/50 dark:text-red-300'
                           : 'border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
                       }`}
                     >
@@ -163,7 +163,7 @@ export default function FilterForm({
                 </button>
                 <button
                   onClick={apply}
-                  className="rounded-md bg-zinc-100 px-4 py-1.5 text-xs font-semibold text-zinc-900 hover:bg-white"
+                  className="rounded-md bg-zinc-100 px-4 py-1.5 text-xs font-semibold text-zinc-900 hover:bg-zinc-50"
                 >
                   Apply
                 </button>
@@ -175,7 +175,7 @@ export default function FilterForm({
         {/* Search apply */}
         <button
           onClick={apply}
-          className="rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white"
+          className="rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50"
         >
           Search
         </button>

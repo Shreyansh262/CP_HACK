@@ -1,9 +1,22 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* Theme is chosen manually via `data-theme` on <html> (set by the header toggle
+   and the no-FOUC script in layout.tsx, which seeds from localStorage / system).
+   `dark:` utilities respond to that attribute instead of the OS preference. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* App is designed dark-first — this is the default (and the SSR/no-JS state). */
+  color-scheme: dark;
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  /* Streak-calendar levels (SVG fills, can't use Tailwind utilities). Dark mode:
+     more solves → brighter green. */
+  --cal-empty: #27272a;
+  --cal-1: #166534; /* green-800 */
+  --cal-2: #16a34a; /* green-600 */
+  --cal-3: #22c55e; /* green-500 */
 }
 
 @theme inline {
@@ -11,6 +24,34 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+/* Light mode. The whole UI is built from dark `zinc` utilities, so rather than
+   restyle every component we invert the zinc scale. Each utility resolves to
+   var(--color-zinc-*), so remapping the ramp (50<->950, 100<->900, …) flips
+   backgrounds, text and borders to a balanced light palette automatically while
+   keeping contrast intact. Dark mode keeps Tailwind's defaults. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #ffffff;
+  --foreground: #18181b;
+  --cal-empty: #e4e4e7;
+  /* Light mode: flip the green intensity — more solves → deeper green so they
+     stand out against the light background. */
+  --cal-1: #bbf7d0; /* green-200 */
+  --cal-2: #4ade80; /* green-400 */
+  --cal-3: #15803d; /* green-700 */
+  --color-zinc-50: oklch(14.1% 0.005 285.823);
+  --color-zinc-100: oklch(21% 0.006 285.885);
+  --color-zinc-200: oklch(27.4% 0.006 286.033);
+  --color-zinc-300: oklch(37% 0.013 285.805);
+  --color-zinc-400: oklch(44.2% 0.017 285.786);
+  --color-zinc-500: oklch(55.2% 0.016 285.938);
+  --color-zinc-600: oklch(70.5% 0.015 286.067);
+  --color-zinc-700: oklch(87.1% 0.006 286.286);
+  --color-zinc-800: oklch(92% 0.004 286.32);
+  --color-zinc-900: oklch(96.7% 0.001 286.375);
+  --color-zinc-950: oklch(98.5% 0.001 286.375);
 }
 
 /* Larger type scale — app text was too small to read comfortably. Bumps the
@@ -25,13 +66,6 @@
   --text-base--line-height: 1.65rem;
   --text-lg: 1.1875rem;
   --text-lg--line-height: 1.8rem;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {

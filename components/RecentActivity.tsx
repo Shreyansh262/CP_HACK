@@ -33,9 +33,13 @@ function fmtTime(secs: number): string {
 }
 
 function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+  // Pin the locale + timezone so the server and client render identical text
+  // (an unpinned locale formats e.g. "Jun 7" on the server but "7 Jun" on the
+  // client, causing a hydration mismatch).
+  return new Date(iso).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
+    timeZone: 'UTC',
   });
 }
 
@@ -80,9 +84,9 @@ export default function RecentActivity({ rows }: { rows: ProgressRow[] }) {
                 )}
                 {(row.tier1_calls > 0 || row.tier2_calls > 0) && (
                   <span>
-                    AI <span className="text-blue-400">{row.tier1_calls} quick</span>
+                    AI <span className="text-blue-700 dark:text-blue-400">{row.tier1_calls} quick</span>
                     {' · '}
-                    <span className="text-violet-400">{row.tier2_calls} deep</span>
+                    <span className="text-violet-700 dark:text-violet-400">{row.tier2_calls} deep</span>
                   </span>
                 )}
                 <span>{fmtDate(row.updated_at)}</span>

@@ -45,7 +45,7 @@ export default function HintPanel({ hints }: { hints: Hint[] }) {
               {!unlocked && nextUp && (
                 <button
                   onClick={() => setRevealed(h.level)}
-                  className="rounded bg-zinc-100 px-2 py-1 text-[14px] font-medium text-zinc-900 hover:bg-white"
+                  className="rounded bg-zinc-100 px-2 py-1 text-[14px] font-medium text-zinc-900 hover:bg-zinc-50"
                 >
                   Reveal
                 </button>
@@ -53,7 +53,7 @@ export default function HintPanel({ hints }: { hints: Hint[] }) {
             </div>
 
             {unlocked ? (
-              <div className="prose prose-invert prose-base max-w-none text-zinc-200 [&_p]:my-1 [&_p]:leading-relaxed">
+              <div className="prose dark:prose-invert prose-base max-w-none text-zinc-200 [&_p]:my-1 [&_p]:leading-relaxed">
                 <ReactMarkdown
                   remarkPlugins={[remarkMath]}
                   rehypePlugins={[rehypeKatex]}

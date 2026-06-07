@@ -64,7 +64,7 @@ export default function AuthButton({ user }: { user: User | null }) {
   // ── Magic-link sent state ────────────────────────────────────────────────────
   if (sent) {
     return (
-      <p className="text-xs text-green-400">
+      <p className="text-xs text-green-700 dark:text-green-400">
         ✓ Check your email for the sign-in link.
       </p>
     );
@@ -87,7 +87,7 @@ export default function AuthButton({ user }: { user: User | null }) {
           onClick={signInWithEmail}
           disabled={loading || !email.trim()}
           suppressHydrationWarning
-          className="rounded bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-900 hover:bg-white disabled:opacity-50"
+          className="rounded bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-900 hover:bg-zinc-50 disabled:opacity-50"
         >
           {loading ? '…' : 'Send link'}
         </button>

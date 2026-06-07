@@ -279,7 +279,7 @@ export default function ProblemView({
           </select>
 
           {diagnostics.length > 0 && (
-            <span className="text-xs text-amber-400">
+            <span className="text-xs text-amber-700 dark:text-amber-400">
               {diagnostics.length} issue{diagnostics.length !== 1 ? 's' : ''}
             </span>
           )}
@@ -295,8 +295,8 @@ export default function ProblemView({
               disabled={markedSolved}
               suppressHydrationWarning
               className={`ml-auto rounded border px-2 py-0.5 text-[14px] transition-colors ${markedSolved
-                ? 'border-green-800 text-green-600 cursor-default'
-                : 'border-green-800 text-green-400 hover:border-green-600 hover:text-green-300'
+                ? 'border-green-800 text-green-700 dark:text-green-600 cursor-default'
+                : 'border-green-800 text-green-700 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 hover:border-green-600'
                 }`}
             >
               {markedSolved ? '✓ Solved' : '✓ Mark solved'}
