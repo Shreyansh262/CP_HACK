@@ -56,11 +56,28 @@ type DonePayload = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Stable cache key for a (problem, code, intent, tier) combination. */
-function cacheKey(problemId: string, code: string, intent: string, tier: string): string {
+/**
+ * Stable cache key for a (problem, code, intent, tier) combination.
+ *
+ * SECURITY: `problem` is client-supplied and also drives the system prompt, so
+ * the key is bound to the *content* that shaped the answer — not just
+ * `problem.id`. Keying on the id alone let a forged request (real id + attacker
+ * statement) poison the entry served to other users on that problem. Folding the
+ * prompt-determining fields in means a forged statement lands on a different key,
+ * while honest requests on the same real problem still share one.
+ */
+function cacheKey(problem: Problem, code: string, intent: string, tier: string): string {
   const normalized = code.replace(/\s+/g, ' ').trim().slice(0, 4000);
+  const fingerprint = JSON.stringify({
+    id: problem.id,
+    title: problem.title,
+    statement: problem.problem_statement,
+    difficulty: problem.difficulty,
+    tags: problem.tags,
+    hints: problem.hints,
+  });
   const hash = createHash('sha256')
-    .update(`${problemId}:${normalized}:${intent}:${tier}`)
+    .update(`${fingerprint}:${normalized}:${intent}:${tier}`)
     .digest('hex')
     .slice(0, 20);
   return `cache:review:${hash}`;
@@ -135,7 +152,7 @@ export async function POST(request: NextRequest) {
   const eTier = effectiveTier as 'quick' | 'deep';
 
   // 5. Cache check — hits don't burn quota
-  const ck = cacheKey(problem.id, code, intent, eTier);
+  const ck = cacheKey(problem, code, intent, eTier);
   try {
     const raw = await redis.get<string>(ck);
     if (raw) {

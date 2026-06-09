@@ -10,7 +10,15 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
   // `next` lets us redirect to the page the user was on before signing in.
-  const next = searchParams.get('next') ?? '/';
+  // Only accept same-site relative paths — a value like `@evil.com`, `//evil.com`,
+  // or `/\evil.com` would otherwise resolve to a foreign host (open redirect).
+  const rawNext = searchParams.get('next') ?? '/';
+  const next =
+    rawNext.startsWith('/') &&
+    !rawNext.startsWith('//') &&
+    !rawNext.startsWith('/\\')
+      ? rawNext
+      : '/';
 
   if (code) {
     const cookieStore = await cookies();

@@ -7,6 +7,8 @@ import type { Problem } from '@/lib/types';
 import ProblemStatement from '@/components/ProblemStatement';
 import TutorChat from '@/components/TutorChat';
 import Stopwatch from '@/components/Stopwatch';
+import { useSessionCode } from '@/lib/useSessionCode';
+import { downloadCode } from '@/lib/downloadCode';
 // TODO: Phase 6 — wire back when execution provider is decided.
 // import RunPanel from '@/components/RunPanel';
 import SimilarProblems from '@/components/SimilarProblems';
@@ -74,12 +76,21 @@ def main():
 
 main()`;
 
+const STARTER: Record<'cpp' | 'python', string> = {
+  cpp: DEFAULT_CPP,
+  python: DEFAULT_PYTHON,
+};
+
 export default function UnseenProblemView({ problem, user }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [leftPct, setLeftPct] = useState(30);
   const [rightPct, setRightPct] = useState(28);
-  const [language, setLanguage] = useState<'cpp' | 'python'>('cpp');
-  const [code, setCode] = useState(DEFAULT_CPP);
+  // Editor state is session-cached per problem so it survives leaving the page
+  // and coming back (cleared when the tab closes). See useSessionCode.
+  const { language, code, setCode, switchLanguage } = useSessionCode(
+    `ai-tutor:code:unseen:${problem.id}`,
+    STARTER,
+  );
   const [solved, setSolved] = useState(false);
   const dragRef = useRef<{ side: 'left' | 'right'; startX: number; startPct: number } | null>(null);
 
@@ -93,12 +104,6 @@ export default function UnseenProblemView({ problem, user }: Props) {
       body: JSON.stringify({ problemId: problem.id, source: 'unseen' }),
     }).catch(() => { });
   }, [solved, user, problem.id]);
-
-  // ── Language switch ─────────────────────────────────────────────────────────
-  function switchLanguage(lang: 'cpp' | 'python') {
-    setLanguage(lang);
-    setCode(lang === 'cpp' ? DEFAULT_CPP : DEFAULT_PYTHON);
-  }
 
   // ── Drag resize ─────────────────────────────────────────────────────────────
   function startDrag(e: React.MouseEvent, side: 'left' | 'right') {
@@ -206,19 +211,30 @@ export default function UnseenProblemView({ problem, user }: Props) {
             <Stopwatch />
           </div>
 
-          {user && (
+          <div className="ml-auto flex items-center gap-2">
             <button
-              onClick={markSolved}
-              disabled={solved}
+              onClick={() => downloadCode(code, language, problem.title)}
               suppressHydrationWarning
-              className={`ml-auto rounded border px-3 py-1 text-sm font-medium transition-colors ${solved
-                  ? 'cursor-default border-green-800 bg-green-900/30 text-green-500'
-                  : 'border-zinc-700 text-zinc-400 hover:border-green-700 hover:text-green-400'
-                }`}
+              title="Download your code to a file"
+              className="rounded border border-zinc-700 px-3 py-1 text-sm font-medium text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
             >
-              {solved ? '✓ Solved' : 'Mark solved'}
+              ↓ Save
             </button>
-          )}
+
+            {user && (
+              <button
+                onClick={markSolved}
+                disabled={solved}
+                suppressHydrationWarning
+                className={`rounded border px-3 py-1 text-sm font-medium transition-colors ${solved
+                    ? 'cursor-default border-green-800 bg-green-900/30 text-green-500'
+                    : 'border-zinc-700 text-zinc-400 hover:border-green-700 hover:text-green-400'
+                  }`}
+              >
+                {solved ? '✓ Solved' : 'Mark solved'}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="min-h-0 flex-1">

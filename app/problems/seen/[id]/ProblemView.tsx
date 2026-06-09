@@ -8,6 +8,8 @@ import ProblemStatement from '@/components/ProblemStatement';
 import TutorChat from '@/components/TutorChat';
 import SimilarProblems from '@/components/SimilarProblems';
 import Stopwatch from '@/components/Stopwatch';
+import { useSessionCode } from '@/lib/useSessionCode';
+import { downloadCode } from '@/lib/downloadCode';
 // TODO: Phase 6 — wire back when execution provider is decided.
 // import RunPanel from '@/components/RunPanel';
 
@@ -64,8 +66,12 @@ export default function ProblemView({
   problem: Problem;
   user: User | null;
 }) {
-  const [language, setLanguage] = useState<'cpp' | 'python'>('cpp');
-  const [code, setCode] = useState<string>(STARTER.cpp);
+  // Editor state is session-cached per problem so it survives leaving the page
+  // and coming back (cleared when the tab closes). See useSessionCode.
+  const { language, code, setCode, switchLanguage } = useSessionCode(
+    `ai-tutor:code:seen:${problem.id}`,
+    STARTER,
+  );
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
   const [markedSolved, setMarkedSolved] = useState(false);
 
@@ -180,13 +186,6 @@ export default function ProblemView({
     };
   }, []);
 
-  // Switch language and reset to that language's starter in one action, so we
-  // don't drive code state from an effect.
-  const switchLanguage = (lang: 'cpp' | 'python') => {
-    setLanguage(lang);
-    setCode(STARTER[lang] ?? '');
-  };
-
   // Debounced parse: 350ms after last keystroke.
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -288,20 +287,32 @@ export default function ProblemView({
             <Stopwatch />
           </div>
 
-          {/* Phase 4: Mark Solved button */}
-          {user && (
+          {/* Save + Mark solved */}
+          <div className="ml-auto flex items-center gap-2">
             <button
-              onClick={handleMarkSolved}
-              disabled={markedSolved}
+              onClick={() => downloadCode(code, language, problem.title)}
               suppressHydrationWarning
-              className={`ml-auto rounded border px-2 py-0.5 text-[14px] transition-colors ${markedSolved
-                ? 'border-green-800 text-green-700 dark:text-green-600 cursor-default'
-                : 'border-green-800 text-green-700 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 hover:border-green-600'
-                }`}
+              title="Download your code to a file"
+              className="rounded border border-zinc-700 px-2 py-0.5 text-[14px] text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
             >
-              {markedSolved ? '✓ Solved' : '✓ Mark solved'}
+              ↓ Save
             </button>
-          )}
+
+            {/* Phase 4: Mark Solved button */}
+            {user && (
+              <button
+                onClick={handleMarkSolved}
+                disabled={markedSolved}
+                suppressHydrationWarning
+                className={`rounded border px-2 py-0.5 text-[14px] transition-colors ${markedSolved
+                  ? 'border-green-800 text-green-700 dark:text-green-600 cursor-default'
+                  : 'border-green-800 text-green-700 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 hover:border-green-600'
+                  }`}
+              >
+                {markedSolved ? '✓ Solved' : '✓ Mark solved'}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Editor */}
