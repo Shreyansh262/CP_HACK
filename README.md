@@ -66,6 +66,10 @@ The fallback chain is automatic. Users always see why their tier changed and how
 - **Performance dashboard** — 0–100 score (rating-weighted, hint/AI-penalized, rolling 30 days), streak calendar, strong/weak topic analysis, difficulty histogram
 - **Unseen problem paste** — paste a Codeforces URL, the app parses it and generates hints live; embeddings cached
 - **Similar problems** — pgvector cosine similarity with tag/difficulty-weighted ranking
+- **Per-message model selector** — pick Quick or Deep per message; Deep auto-disables when its quota is spent
+- **Save & restore code** — download your solution (File System Access API, with a Downloads fallback); a per-session `sessionStorage` cache restores your code across reloads and in-app navigation
+- **Manual stopwatch** — a display-only practice timer in the editor toolbar (heartbeat stays the source of truth for tracked time)
+- **Dark / light theme** — system-aware toggle
 - **Auth tiers** — anonymous: browse + editor + all stored hints; signed-in: all AI features + profile
 
 ---
@@ -113,6 +117,22 @@ Response cache: SHA-256(problem_id + normalized_code + intent + tier), TTL 24h
 ```
 
 Cache hits return instantly and don't increment any counter. Identical code sent twice costs nothing.
+
+---
+
+## Security
+
+The codebase went through dedicated security audit passes. Highlights:
+
+- **Service-role / anon-key boundary (enforced).** The RLS-bypassing service-role client is confined to trusted server-only paths (`/api/review`, `/api/progress/*`, `/api/unseen/parse`, profile queries) and is never imported into a page component. Every user-facing read goes through the RLS-respecting anon SSR client (`@supabase/ssr`).
+- **Auth-gated paid endpoints.** Every Gemini / embedding call sits behind `requireUser()` plus a quota check; over-quota returns `429` before any external request fires.
+- **Open-redirect-safe auth.** The OAuth callback `?next=` param accepts only same-site relative paths — `//evil.com` and `/\evil.com` fall back to `/`.
+- **Cache-poisoning-safe AI cache.** The Redis response-cache key folds in a fingerprint of the prompt-determining fields, so a forged problem statement can't poison the cached answer served to other users on a real problem id.
+- **Security headers.** `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and a restrictive `Permissions-Policy` on every route (`next.config.ts`).
+- **XSS-safe rendering.** All problem and AI markdown renders through `react-markdown` defaults — no `rehype-raw`, no `dangerouslySetInnerHTML` on user/AI content; KaTeX runs with `trust: false`.
+- **SSRF-safe parsing.** The unseen-problem parser restricts fetches to the `codeforces.com` host and specific path shapes.
+- **Boot-time env validation.** `lib/env.ts` fails fast with a named error at module load if a required secret is missing, rather than failing cryptically mid-request.
+- **No committed secrets.** `.env*` is git-ignored; the service-role key is server-only and never exposed to the browser.
 
 ---
 
@@ -181,7 +201,9 @@ app/
     seen/[id]/                    # Seeded problem view (page.tsx + ProblemView.tsx)
     unseen/[id]/                  # Parsed unseen problem view (page.tsx + UnseenProblemView.tsx)
   profile/page.tsx                # Performance dashboard
-  auth/callback/route.ts          # OAuth / magic-link callback
+  auth/page.tsx                   # Sign-in card
+  auth/error/page.tsx             # Auth error page
+  auth/callback/route.ts          # OAuth / magic-link callback (open-redirect-safe)
   api/
     review/route.ts               # AI feedback dispatcher (SSE, quota, cache)
     quota/route.ts                # Badge state on mount
@@ -200,6 +222,7 @@ components/                       # Flat — no subfolders
   FilterForm.tsx                  # Problem-list filters
   UnseenProblemInput.tsx          # Codeforces URL paste box
   AuthButton.tsx / Footer.tsx     # Shell chrome
+  ThemeToggle.tsx                 # Dark / light theme switch
   StreakCalender.tsx              # Profile: streak calendar
   TopicStrength.tsx               # Profile: strong/weak topics
   DifficultyHistogram.tsx         # Profile: difficulty distribution
@@ -213,6 +236,8 @@ lib/
   progress.ts                     # Progress read/write helpers
   topic-categories.ts             # Tag → topic-bucket mapping
   env.ts                          # Boot-time env validation
+  downloadCode.ts                 # Save-to-file (File System Access API + fallback)
+  useSessionCode.ts               # Per-session sessionStorage code cache
   types.ts                        # Shared types
   supabase.ts / supabase-server.ts / supabase-browser.ts  # Supabase clients
 scripts/
